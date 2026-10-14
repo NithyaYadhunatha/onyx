@@ -1,0 +1,9 @@
+# Onyx tool servers (desktop, office, phone)
+mcp>=1.9,<2
+uiautomation>=2.0.20
+mss>=9.0
+pyautogui>=0.9.54
+pillow>=10.0
+keyboard>=0.13.5
+openpyxl>=3.1
+pdfplumber>=0.11

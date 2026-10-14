@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws://127.0.0.1:* ws: wss:; img-src 'self' data:"
+    />
+    <meta name="theme-color" content="#0b0b10" />
+    <title>Onyx</title>
+    <link rel="icon" href="icon.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div id="shell">
+      <header id="bar">
+        <div class="brand">
+          <img src="icon.png" alt="" />
+          <span>Onyx</span>
+          <span id="status" class="status">connecting…</span>
+        </div>
+        <div class="actions">
+          <button id="btn-tasks" title="Scheduled tasks">Tasks</button>
+          <button id="btn-phone" class="desktop-only" title="Use Onyx from your phone">Phone</button>
+          <button id="btn-new" title="New conversation">New</button>
+          <button id="btn-pin" class="desktop-only" title="Keep this window open">Pin</button>
+          <button id="btn-stop" class="stop" title="Stop (Ctrl+Alt+Esc anywhere)">Stop</button>
+          <button id="btn-close" class="desktop-only icon" title="Hide (Esc)">✕</button>
+        </div>
+      </header>
+
+      <main id="feed" aria-live="polite">
+        <div id="empty">
+          <img src="icon.png" alt="" />
+          <h1>What should I do?</h1>
+          <div class="examples">
+            <button>Organise my Downloads folder by file type</button>
+            <button>Add this month's PhonePe statement to my expense sheet</button>
+            <button>Open Excel and make a monthly budget template</button>
+            <button>Every Sunday at 8pm, send me my week's spending</button>
+          </div>
+        </div>
+      </main>
+
+      <section id="panel" hidden>
+        <div class="panel-head">
+          <h2 id="panel-title"></h2>
+          <button id="panel-close" class="icon">✕</button>
+        </div>
+        <div id="panel-body"></div>
+      </section>
+
+      <footer id="composer">
+        <textarea id="input" rows="1" placeholder="Ask Onyx to do something…" autocomplete="off"></textarea>
+        <button id="send" title="Send (Enter)">➤</button>
+      </footer>
+    </div>
+    <script src="renderer.js"></script>
+  </body>
+</html>

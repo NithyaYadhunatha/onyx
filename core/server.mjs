@@ -78,7 +78,14 @@ function originOk(req) {
 
 // ---- HTTP ----------------------------------------------------------------
 
-const MOBILE = () => readFileSync(join(ROOT, 'core', 'web', 'mobile.html'), 'utf8')
+// The phone gets the same interface as the desktop window, served from app/.
+const STATIC = {
+  '/m': ['index.html', 'text/html; charset=utf-8'],
+  '/': ['index.html', 'text/html; charset=utf-8'],
+  '/renderer.js': ['renderer.js', 'text/javascript; charset=utf-8'],
+  '/style.css': ['style.css', 'text/css; charset=utf-8'],
+  '/icon.png': ['icon.png', 'image/png'],
+}
 
 function lanAddresses() {
   return Object.values(networkInterfaces())
@@ -115,19 +122,27 @@ function handler(isLan) {
       if (req.method === 'GET' && url.pathname === '/health') {
         return json(res, 200, { ok: true, name: 'onyx', brain: config.brain })
       }
-      if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/m')) {
+      if (req.method === 'GET' && STATIC[url.pathname]) {
+        const [file, type] = STATIC[url.pathname]
         res.writeHead(200, {
-          'content-type': 'text/html; charset=utf-8',
-          'content-security-policy': "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self' ws: wss:; img-src 'self' data:",
+          'content-type': type,
+          'content-security-policy': "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws: wss:; img-src 'self' data:",
           'referrer-policy': 'no-referrer',
+          'x-content-type-options': 'nosniff',
+          'cache-control': 'no-cache',
         })
-        return res.end(MOBILE())
+        return res.end(readFileSync(join(ROOT, 'app', file)))
       }
       if (!tokenOk(bearer(req))) return json(res, 401, { error: 'missing or wrong token' })
 
       if (req.method === 'POST' && url.pathname === '/stop') {
         await hub.stop('stop requested')
         return json(res, 200, { stopped: true })
+      }
+      if (req.method === 'POST' && url.pathname === '/shutdown' && !isLan) {
+        json(res, 200, { shutting_down: true })
+        setTimeout(shutdown, 100)
+        return
       }
       if (req.method === 'POST' && url.pathname === '/ask') {
         const b = await body(req)

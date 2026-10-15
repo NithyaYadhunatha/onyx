@@ -146,6 +146,7 @@ const STATIC = {
   '/renderer.js': ['renderer.js', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
   '/icon.png': ['icon.png', 'image/png'],
+  '/gem.png': ['gem.png', 'image/png'],
 }
 
 function lanAddresses() {

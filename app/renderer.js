@@ -6,8 +6,13 @@
   const params = new URLSearchParams(location.search)
   // The desktop runs this page twice: as the corner widget and as the full app.
   const isWidget = isDesktop && params.get('mode') === 'widget'
-  if (!isDesktop) document.body.classList.add('web')
-  if (isWidget) document.body.classList.add('widget', 'collapsed')
+  // ?preview=widget shows the open widget's layout in a browser, for design checks.
+  if (!isDesktop && params.get('preview') === 'widget') document.documentElement.classList.add('widget'), document.body.classList.add('widget')
+  else if (!isDesktop) document.body.classList.add('web')
+  if (isWidget) {
+    document.body.classList.add('widget', 'collapsed')
+    document.documentElement.classList.add('widget')
+  }
 
   const $ = (sel, root = document) => root.querySelector(sel)
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)]
@@ -177,7 +182,7 @@
   function startTurn(m) {
     if (!m.background && m.clientId !== clientId && m.text) userBubble(m.text, m.source)
     const msg = el('div', 'msg onyx')
-    msg.innerHTML = `<div class="avatar"><img src="icon.png" alt=""></div><div class="body"></div>`
+    msg.innerHTML = `<div class="avatar"><img src="gem.png" alt=""></div><div class="body"></div>`
     const body = $('.body', msg)
     if (m.background) body.appendChild(el('div', 'task-label', esc(m.text)))
     const text = el('div', 'text thinking')

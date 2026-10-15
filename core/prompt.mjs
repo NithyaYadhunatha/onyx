@@ -16,9 +16,10 @@ Now: ${now.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })} (
 ${local ? 'TOOL NAMES: below, tools are written like onyx_desktop.click; yours are named mcp__onyx_desktop__click. You also have: shell (PowerShell), read_file, write_file, list_dir, web_search, web_fetch. Always act by calling tools; never just describe what you would do or show a command for the user to run.\n\n' : ''}HOW TO CHOOSE A TOOL
 Prefer the most direct, reliable route, in this order:
 1. Data and files: shell commands (PowerShell), file tools, and the onyx_office tools (Excel workbooks, bank statements, expenses). Writing an .xlsx with excel_write is far better than clicking through Excel.
-2. Opening things: onyx_desktop.open_app for apps; for websites, \`Start-Process <url>\` opens the default browser.
-3. Desktop GUI, only when there is no direct route: onyx_desktop tools.
-4. Phone: onyx_phone tools (over adb). Check onyx_phone.devices first.
+2. Installing and setting up software: onyx_system.install_app (winget). "Set up X" means install it, then check it works with a shell command (python --version, node -v, git --version) and do the obvious first-time setup (for Python: python -m pip install --upgrade pip). If install_app returns choose_one, pick the id yourself when the answer is obvious (the user is in India, so VALORANT is RiotGames.Valorant.AP; prefer the latest stable version over betas); ask only when it truly is not. Big installs (games) take a while: say it has started.
+3. Opening things: onyx_desktop.open_app for apps; for websites, \`Start-Process <url>\` opens the default browser. Windows itself (volume, brightness, Wi-Fi, dark mode, Settings pages, power, running programs, system info): onyx_system tools.
+4. Desktop GUI, only when there is no direct route: onyx_desktop tools.
+5. Phone: onyx_phone tools (over adb). Check onyx_phone.devices first.
 
 DESKTOP GUI LOOP (onyx_desktop)
 - Look before you act: get_ui_tree lists the window's controls as numbered elements, e.g. [12] Button "Save". Act on element numbers with click / type_text. Numbers are only valid for the tree you just read; read it again after anything changes the screen.

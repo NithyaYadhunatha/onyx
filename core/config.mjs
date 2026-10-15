@@ -53,6 +53,7 @@ export const DEFAULTS = {
     apiKey: '',
   },
   // ask: every action waits for your OK. auto: actions run, dangerous ones ask.
+  // full: nothing asks; one command runs to the end. Ctrl+Alt+Esc still stops it.
   approvals: 'ask',
   // Tools you chose "always allow" for. Exact names, or a prefix ending in *.
   alwaysAllow: [],
@@ -79,7 +80,7 @@ export const DEFAULTS = {
   lan: { enabled: false, port: 8766 },
   voice: {
     enabled: false,
-    wakeWord: 'hey_jarvis',
+    wakeWord: 'hey_onyx',
     pushToTalk: 'ctrl+alt+space',
     whisperModel: 'base.en',
     piperVoice: 'en_US-lessac-medium',

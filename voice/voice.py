@@ -1,6 +1,6 @@
 """Onyx voice: talk to Onyx, hear it answer. Everything runs on this PC.
 
-  wake word  openWakeWord ("hey jarvis" by default), or the push-to-talk hotkey
+  wake word  "hey onyx", spotted by Whisper (or a trained openWakeWord model), or push-to-talk
   hearing    faster-whisper (OpenAI Whisper, run locally)
   speaking   Piper neural voices, falling back to the Windows voice
 
@@ -21,6 +21,7 @@ import re
 import sys
 import threading
 import time
+import traceback
 
 import numpy as np
 import sounddevice as sd
@@ -44,7 +45,7 @@ def load_settings() -> dict:
             cfg = json.load(f)
     except Exception:
         pass
-    v = {"wakeWord": "hey_jarvis", "pushToTalk": "ctrl+alt+space", "whisperModel": "base.en", "piperVoice": "en_US-lessac-medium"}
+    v = {"wakeWord": "hey_onyx", "pushToTalk": "ctrl+alt+space", "whisperModel": "base.en", "piperVoice": "en_US-lessac-medium"}
     v.update(cfg.get("voice") or {})
     port = int(os.environ.get("ONYX_PORT") or cfg.get("port") or 8765)
     with open(os.path.join(ONYX_HOME, "token"), encoding="utf-8") as f:
@@ -152,26 +153,68 @@ class Ears:
         self._load_whisper(settings["whisperModel"])
 
     def _load_wake(self, name: str):
-        try:
-            from openwakeword.model import Model
+        """A trained openWakeWord model if you have one for this phrase
+        (models/openwakeword/<name>.onnx); otherwise Whisper listens for it."""
+        folder = os.path.join(MODELS, "openwakeword")
+        path = next((p for p in (os.path.join(folder, f"{name}.onnx"), os.path.join(folder, f"{name}_v0.1.onnx")) if os.path.exists(p)), None)
+        if path:
+            try:
+                from openwakeword.model import Model
 
-            folder = os.path.join(MODELS, "openwakeword")
-            path = os.path.join(folder, f"{name}_v0.1.onnx")
-            custom = os.path.join(folder, f"{name}.onnx")
-            if not os.path.exists(path) and os.path.exists(custom):
-                path = custom
-            if not os.path.exists(path):
-                log(f'wake word "{name}" not downloaded: run `npm run setup`. Push-to-talk still works.')
+                self.wake = Model(
+                    wakeword_models=[path],
+                    inference_framework="onnx",
+                    melspec_model_path=os.path.join(folder, "melspectrogram.onnx"),
+                    embedding_model_path=os.path.join(folder, "embedding_model.onnx"),
+                )
+                log(f'wake word: "{name.replace("_", " ")}" (openWakeWord)')
                 return
-            self.wake = Model(
-                wakeword_models=[path],
-                inference_framework="onnx",
-                melspec_model_path=os.path.join(folder, "melspectrogram.onnx"),
-                embedding_model_path=os.path.join(folder, "embedding_model.onnx"),
-            )
-            log(f'wake word: "{name.replace("_", " ")}"')
-        except Exception as err:
-            log(f"wake word unavailable ({err}). Push-to-talk still works.")
+            except Exception as err:
+                log(f"openWakeWord model failed ({err}); using Whisper to listen for the wake word")
+        log(f'wake word: "{name.replace("_", " ")}" (Whisper)')
+
+    def _wake_in(self, text: str) -> tuple[bool, str]:
+        """Is the wake phrase in what was heard? Returns (found, command after it)."""
+        m = WAKE.search(text)
+        if not m:
+            return False, ""
+        rest = text[m.end():].strip(" ,.!?-")
+        return True, rest
+
+    def _segments(self, stop: threading.Event):
+        """Cut the microphone stream into utterances with a simple energy gate."""
+        pre: list[np.ndarray] = []
+        chunks: list[np.ndarray] = []
+        floor, voiced, silent = None, False, 0.0
+        while not stop.is_set():
+            if self.exclusive.is_set():
+                time.sleep(0.05)
+                chunks, voiced = [], False
+                continue
+            if self.ptt.is_set():
+                yield "ptt", None
+                chunks, voiced = [], False
+                continue
+            try:
+                f = self.frames.get(timeout=0.2)
+            except queue.Empty:
+                continue
+            rms = float(np.sqrt(np.mean((f.astype(np.float32) / 32768) ** 2)))
+            floor = rms if floor is None else (min(floor * 1.001 + 1e-5, max(rms, 1e-4)) if not voiced else floor)
+            loud = rms > max(0.01, floor * 3.0)
+            if not voiced:
+                pre = (pre + [f])[-4:]  # keep ~0.3 s before speech starts
+                if loud:
+                    voiced, silent, chunks = True, 0.0, pre[:]
+                continue
+            chunks.append(f)
+            silent = 0.0 if loud else silent + FRAME / RATE
+            length = len(chunks) * FRAME / RATE
+            if silent > 0.7 or length > 8:
+                voiced = False
+                if 0.4 < length - silent:
+                    yield "speech", np.concatenate(chunks).astype(np.float32) / 32768
+                chunks = []
 
     def _load_whisper(self, model: str):
         from faster_whisper import WhisperModel
@@ -207,28 +250,38 @@ class Ears:
             except queue.Empty:
                 break
 
-    def wait_for_wake(self, stop: threading.Event) -> str:
-        """Blocks until the wake word or push-to-talk. Returns which."""
+    def wait_for_wake(self, stop: threading.Event) -> tuple[str, str]:
+        """Blocks until the wake phrase or push-to-talk.
+        Returns (how, command): command is what was said right after the
+        wake phrase in the same breath ("hey onyx, open spotify"), if anything."""
         self.drain()
-        if self.wake:
+        if self.wake:  # a trained model: frame by frame
             self.wake.reset()
-        while not stop.is_set():
-            if self.exclusive.is_set():
-                time.sleep(0.05)
-                continue
-            if self.ptt.is_set():
-                self.ptt.clear()
-                return "ptt"
-            try:
-                frame = self.frames.get(timeout=0.2)
-            except queue.Empty:
-                continue
-            if self.wake:
-                scores = self.wake.predict(frame)
-                if max(scores.values(), default=0) > 0.5:
+            while not stop.is_set():
+                if self.ptt.is_set():
+                    self.ptt.clear()
+                    return "ptt", ""
+                if self.exclusive.is_set():
+                    time.sleep(0.05)
+                    continue
+                try:
+                    frame = self.frames.get(timeout=0.2)
+                except queue.Empty:
+                    continue
+                if max(self.wake.predict(frame).values(), default=0) > 0.5:
                     self.wake.reset()
-                    return "wake"
-        return ""
+                    return "wake", ""
+            return "", ""
+        for kind, audio in self._segments(stop):
+            if kind == "ptt":
+                self.ptt.clear()
+                return "ptt", ""
+            text = self.transcribe(audio, prompt="Hey Onyx.")
+            found, rest = self._wake_in(text)
+            if found:
+                log(f"wake: {text!r}")
+                return "wake", rest
+        return "", ""
 
     def record(self, max_sec=15.0, start_timeout=5.0) -> np.ndarray | None:
         """Record one utterance, ending at ~0.9 s of silence."""
@@ -259,10 +312,14 @@ class Ears:
             return None
         return np.concatenate(chunks).astype(np.float32) / 32768
 
-    def transcribe(self, audio: np.ndarray) -> str:
-        segments, _ = self.whisper.transcribe(audio, language="en", beam_size=1, vad_filter=True)
+    def transcribe(self, audio: np.ndarray, prompt: str | None = "Onyx") -> str:
+        # The prompt nudges Whisper to spell the name "Onyx", not "on ex".
+        segments, _ = self.whisper.transcribe(audio, language="en", beam_size=1, vad_filter=True, initial_prompt=prompt)
         return " ".join(s.text for s in segments).strip()
 
+
+# What Whisper writes when someone says "hey onyx" (or "ok onyx", or just "onyx").
+WAKE = re.compile(r"\b(?:(?:hey|hi|hay|okay|ok|yo)[\s,.]+)?(?:onyx|onix|onex|onyks|oniks|on ?yx|annex|anix|onyxx)\b[\s,.!?]*", re.I)
 
 YES = re.compile(r"\b(yes|yeah|yep|sure|ok(ay)?|go ahead|do it|allow|approve|confirm)\b", re.I)
 TASK = re.compile(r"\b(this task|for (this|the) task|all of (it|them))\b", re.I)
@@ -417,29 +474,103 @@ class Voice:
         except Exception as err:
             log(f"push-to-talk hotkey unavailable: {err}")
         self.ears.start()
-        log("listening. Say the wake word, or press push-to-talk.")
+        log(f'listening. Say "{self.cfg["voice"]["wakeWord"].replace("_", " ")}", or press push-to-talk.')
         while not self.stop.is_set():
-            how = self.ears.wait_for_wake(self.stop)
-            if not how:
-                continue
-            self.hush()  # barge-in: talking over Onyx stops it speaking
+            try:
+                self._one_request()
+            except Exception:
+                # One bad moment (a device hiccup, a decode error) must not end voice.
+                log("error while listening:\n" + traceback.format_exc())
+                time.sleep(1)
+
+    def _one_request(self):
+        how, text = self.ears.wait_for_wake(self.stop)
+        if not how:
+            return
+        self.hush()  # barge-in: talking over Onyx stops it speaking
+        if not text:
             beep()
             audio = self.ears.record()
             if audio is None:
                 beep(440, 80)
-                continue
+                return
             text = self.ears.transcribe(audio)
-            log(f"heard: {text!r}")
-            if not text or len(text) < 2:
-                continue
-            if STOP_WORDS.match(text):
-                self.out.put({"type": "stop"})
-                continue
-            self.out.put({"type": "ask", "text": text, "voice": True})
+        log(f"heard: {text!r}")
+        if not text or len(text) < 2:
+            return
+        if STOP_WORDS.match(text):
+            self.out.put({"type": "stop"})
+            return
+        self.out.put({"type": "ask", "text": text, "voice": True})
+
+
+def _setup_logging():
+    """Voice runs without a console, so everything also goes to a log file."""
+    os.makedirs(os.path.join(ONYX_HOME, "logs"), exist_ok=True)
+    path = os.path.join(ONYX_HOME, "logs", "voice.log")
+    f = open(path, "a", encoding="utf-8", buffering=1)
+
+    class Tee:
+        def __init__(self, stream):
+            self.stream = stream
+
+        def write(self, s):
+            try:
+                if self.stream:
+                    self.stream.write(s)
+            except Exception:
+                pass
+            f.write(s)
+
+        def flush(self):
+            try:
+                if self.stream:
+                    self.stream.flush()
+            except Exception:
+                pass
+            f.flush()
+
+    sys.stdout, sys.stderr = Tee(sys.stdout), Tee(sys.stderr)
+    sys.excepthook = lambda *e: log("crashed:\n" + "".join(traceback.format_exception(*e)))
+    threading.excepthook = lambda a: log(f"thread {a.thread.name} crashed:\n" + "".join(traceback.format_exception(a.exc_type, a.exc_value, a.exc_traceback)))
+    log(f"--- voice starting {time.strftime('%Y-%m-%d %H:%M:%S')} ---")
+
+
+def _test_wav(path: str):
+    """Feed a recording through the same wake and transcription steps:
+    python voice/voice.py --wav clip.wav"""
+    import wave
+
+    with wave.open(path) as w:
+        audio = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+        rate = w.getframerate()
+    if rate != RATE:
+        idx = np.linspace(0, len(audio) - 1, int(len(audio) * RATE / rate)).astype(int)
+        audio = audio[idx]
+    ears = Ears(load_settings()["voice"])
+    for i in range(0, len(audio) - FRAME, FRAME):
+        ears.frames.put(audio[i : i + FRAME])
+    for _ in range(20):  # trailing silence ends the last utterance
+        ears.frames.put(np.zeros(FRAME, dtype=np.int16))
+    stop = threading.Event()
+    threading.Timer(2.0, stop.set).start()
+    for kind, seg in ears._segments(stop):
+        if ears.frames.empty():
+            stop.set()
+        text = ears.transcribe(seg, prompt="Hey Onyx.")
+        found, rest = ears._wake_in(text)
+        print(json.dumps({"heard": text, "wake": found, "command": rest}))
 
 
 if __name__ == "__main__":
+    if "--wav" in sys.argv:
+        _test_wav(sys.argv[sys.argv.index("--wav") + 1])
+        sys.exit(0)
+    _setup_logging()
     try:
         Voice().run()
     except KeyboardInterrupt:
         pass
+    except Exception:
+        log("voice stopped:\n" + traceback.format_exc())
+        raise

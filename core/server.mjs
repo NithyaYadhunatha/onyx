@@ -9,12 +9,14 @@
  */
 
 import http from 'node:http'
+import { spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { networkInterfaces } from 'node:os'
 import { timingSafeEqual } from 'node:crypto'
 import { WebSocketServer } from 'ws'
-import { ROOT, accessToken, loadConfig } from './config.mjs'
+import { ROOT, accessToken, dataPath, loadConfig, saveConfig } from './config.mjs'
+import { VoiceProcess } from './voiceproc.mjs'
 import { allServers } from './servers.mjs'
 import { Toolbox } from './toolbox.mjs'
 import { Scheduler } from './scheduler.mjs'
@@ -50,6 +52,65 @@ const scheduler = new Scheduler((task, event) => {
 })
 hub = new Hub({ config, servers, toolbox, scheduler })
 const phone = new PhoneSync({ config, toolbox, scheduler, hub })
+const voice = new VoiceProcess(config)
+
+// ---- settings the app can change while Onyx runs --------------------------
+
+const SETTABLE = {
+  approvals: (v) => ['ask', 'auto', 'full'].includes(v),
+  brain: (v) => ['local', 'claude'].includes(v),
+  'local.model': (v) => typeof v === 'string' && v.length < 100,
+  'local.think': (v) => typeof v === 'boolean',
+  'claude.model': (v) => typeof v === 'string' && v.length < 100,
+  'voice.enabled': (v) => typeof v === 'boolean',
+  'phone.smsSync': (v) => typeof v === 'boolean',
+  'lan.enabled': (v) => typeof v === 'boolean',
+  hotkey: (v) => typeof v === 'string' && v.length < 40,
+}
+
+async function settingsView() {
+  let models = []
+  try {
+    const r = await fetch(`${config.local.baseUrl.replace(/\/v1\/?$/, '')}/api/tags`, { signal: AbortSignal.timeout(1500) })
+    models = (await r.json()).models.map((m) => ({ name: m.name, gb: +(m.size / 1e9).toFixed(1) }))
+  } catch {}
+  let devices = []
+  try {
+    devices = (await toolbox.json('onyx_phone', 'devices')).devices ?? []
+  } catch {}
+  return {
+    approvals: config.approvals,
+    brain: config.brain,
+    local: { model: config.local.model, think: config.local.think, models },
+    claude: { model: config.claude.model },
+    voice: { enabled: config.voice.enabled, running: voice.running, wakeWord: config.voice.wakeWord, pushToTalk: config.voice.pushToTalk },
+    phone: { smsSync: config.phone.smsSync, devices },
+    lan: { enabled: config.lan.enabled, port: config.lan.port },
+    hotkey: config.hotkey,
+    expenses: config.expenses,
+    files: { settings: dataPath('config.json'), logs: dataPath('logs') },
+  }
+}
+
+function applySettings(patch) {
+  const changed = {}
+  for (const [key, value] of Object.entries(patch ?? {})) {
+    if (!SETTABLE[key]?.(value)) continue
+    const [a, b] = key.split('.')
+    if (b) config[a][b] = value
+    else config[a] = value
+    if (b) (changed[a] ??= {})[b] = value
+    else changed[a] = value
+  }
+  if (!Object.keys(changed).length) return
+  saveConfig(changed)
+  if ('voice' in changed && 'enabled' in changed.voice) changed.voice.enabled ? voice.start() : voice.stop()
+  // A different brain or model starts a fresh conversation with it.
+  if ('brain' in changed || changed.local?.model || 'think' in (changed.local ?? {}) || changed.claude?.model) hub.reset()
+  hub.broadcast({ type: 'settings_changed', changed })
+}
+
+const spawnDetached = (cmd, args) => spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref()
 
 // ---- auth ----------------------------------------------------------------
 
@@ -266,6 +327,20 @@ function onSocket(ws, req) {
       case 'ping':
         send({ type: 'pong' })
         break
+      case 'settings':
+        send({ type: 'settings', settings: await settingsView() })
+        break
+      case 'set_settings':
+        applySettings(msg.patch)
+        send({ type: 'settings', settings: await settingsView() })
+        break
+      case 'open_path': {
+        // Only the places Onyx itself owns: settings, logs, the expense workbook.
+        const allowed = { settings: dataPath('config.json'), logs: dataPath('logs'), expenses: config.expenses.workbook }
+        const target = allowed[msg.which]
+        if (target) spawnDetached('explorer.exe', [target])
+        break
+      }
     }
   })
 
@@ -307,11 +382,13 @@ if (config.lan.enabled) {
 
 scheduler.start()
 phone.start()
+if (config.voice.enabled) voice.start()
 
 async function shutdown() {
   console.log('[onyx] shutting down')
   scheduler.stop()
   phone.stop()
+  voice.stop()
   hub.brain?.close()
   await toolbox.close()
   process.exit(0)

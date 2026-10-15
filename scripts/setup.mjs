@@ -140,15 +140,10 @@ async function main() {
 
   step('5. Voice (optional)')
   let voice = cfg.voice.enabled
-  if (!NO_DL && (await ask('Set up voice ("hey jarvis" wake word, local speech recognition, natural voice)? Downloads about 220 MB.', false))) {
+  if (!NO_DL && (await ask('Set up voice ("hey onyx" wake word, local speech recognition, natural voice)? Downloads about 200 MB.', false))) {
     run(PYTHON, ['-m', 'pip', 'install', '-q', '-r', 'requirements-voice.txt'])
     const models = join(ROOT, 'models')
     mkdirSync(join(models, 'piper'), { recursive: true })
-    run(PYTHON, [
-      '-c',
-      `import openwakeword.utils as u; u.download_models(['${cfg.voice.wakeWord}'], target_directory=r'${join(models, 'openwakeword')}')`,
-    ])
-    ok('wake word model')
     run(PYTHON, ['-m', 'piper.download_voices', cfg.voice.piperVoice, '--data-dir', join(models, 'piper')])
     ok(`Piper voice ${cfg.voice.piperVoice}`)
     run(PYTHON, [

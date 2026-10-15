@@ -22,6 +22,12 @@ test('reads run freely, actions ask, danger always asks', () => {
   assert.equal(decide('mcp__onyx_phone__send_sms', {}, { config: cfg({ approvals: 'auto' }), trustTurn: true }).decision, 'ask')
 })
 
+test('full mode never asks', () => {
+  const c = cfg({ approvals: 'full' })
+  for (const t of ['mcp__onyx_desktop__click', 'mcp__onyx_phone__send_sms', 'mcp__onyx_system__install_app']) assert.equal(decide(t, {}, { config: c }).decision, 'allow')
+  assert.equal(decide('Bash', { command: 'rm -rf x' }, { config: c }).decision, 'allow')
+})
+
 test('always-allow covers actions but never danger', () => {
   const c = cfg({ alwaysAllow: ['onyx_desktop.*', 'onyx_phone.send_sms'] })
   assert.equal(decide('mcp__onyx_desktop__type_text', {}, { config: c }).decision, 'allow')

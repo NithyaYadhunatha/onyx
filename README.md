@@ -1,7 +1,7 @@
 # Onyx
 
 **An open-source AI agent that controls your Windows PC and your Android phone.**
-Press a hotkey (or say "hey jarvis"), tell it what you want, and it does it:
+Press a hotkey (or say "hey onyx"), tell it what you want, and it does it:
 files, apps, Excel, the web, your phone. It asks before anything risky.
 
 ```
@@ -71,7 +71,7 @@ not just the prompt:
 | `Alt+Space` | open or hide the Onyx window (from anywhere) |
 | `Ctrl+Alt+Esc` | stop everything |
 | `Ctrl+Alt+Space` | push-to-talk (when voice is on) |
-| "hey jarvis" | wake word (when voice is on) |
+| "hey onyx" | wake word (when voice is on). Say the command in the same breath: "hey onyx, open Spotify" |
 | `npm run cli` | Onyx in a terminal (`npm run cli -- "do something"` for one request) |
 | `npm run cli -- tasks` | list scheduled tasks |
 | `npm run cli -- log` | today's actions |
@@ -90,7 +90,7 @@ Settings live in `%USERPROFILE%\.onyx\config.json`:
   "phone": { "smsSync": true, "smsSyncMinutes": 15 },
   "expenses": { "workbook": "C:\\Users\\you\\Documents\\Onyx\\Expenses.xlsx" },
   "lan": { "enabled": false, "port": 8766 },
-  "voice": { "enabled": false, "wakeWord": "hey_jarvis", "whisperModel": "base.en" }
+  "voice": { "enabled": false, "wakeWord": "hey_onyx", "whisperModel": "base.en" }
 }
 ```
 

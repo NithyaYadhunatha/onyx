@@ -59,6 +59,22 @@ export const RISK = {
   'onyx_phone.open_url': 'act',
   'onyx_phone.dial': 'danger',
   'onyx_phone.send_sms': 'danger',
+  // Onyx system server
+  'onyx_system.search_apps': 'read',
+  'onyx_system.list_installed': 'read',
+  'onyx_system.system_info': 'read',
+  'onyx_system.processes': 'read',
+  'onyx_system.install_app': 'act',
+  'onyx_system.update_apps': 'act',
+  'onyx_system.uninstall_app': 'act',
+  'onyx_system.kill_process': 'act',
+  'onyx_system.volume': 'act',
+  'onyx_system.brightness': 'act',
+  'onyx_system.open_settings': 'act',
+  'onyx_system.wifi': 'act',
+  'onyx_system.dark_mode': 'act',
+  'onyx_system.power': 'danger',
+  'onyx_system.empty_recycle_bin': 'danger',
   // Onyx's own tools inside the core
   'onyx.remember': 'read',
   'onyx.recall': 'read',
@@ -159,6 +175,9 @@ export function decide(toolName, input, ctx) {
   const risk = riskOf(toolName, input)
   const name = canonical(toolName)
   if (risk === 'read') return { decision: 'allow', risk }
+  // "full": you gave the command, Onyx carries it out without asking. The
+  // hard limits (no passwords, no payments) live in the tools themselves.
+  if (ctx.config.approvals === 'full') return { decision: 'allow', risk }
   if (risk === 'danger') return { decision: 'ask', risk }
   if (ctx.config.alwaysAllow?.some((p) => matches(p, name))) return { decision: 'allow', risk }
   if (ctx.trustTurn) return { decision: 'allow', risk }

@@ -43,7 +43,9 @@ const abs = (p) => resolve(homedir(), String(p ?? '').replace(/^~(?=$|[\\/])/, h
 
 function runShell(command, signal) {
   return new Promise((done) => {
-    const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', command], {
+    // Re-read PATH each time, so a program Onyx just installed is found at once.
+    const refresh = "$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User'); "
+    const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', refresh + command], {
       windowsHide: true,
       cwd: homedir(),
     })
@@ -390,7 +392,9 @@ export class LocalBrain {
               } else if (name.startsWith('mcp__')) {
                 const [, server, ...rest] = name.split('__')
                 if (server === 'onyx_phone') this.phoneActive = true
-                const res = await this.opts.toolbox.call(server, rest.join('__'), args)
+                // Installs and updates can take a long time; everything else gets two minutes.
+                const long = server === 'onyx_system' && /install|update/.test(rest.join('__'))
+                const res = await this.opts.toolbox.call(server, rest.join('__'), args, long ? 3_600_000 : 120_000)
                 ok = !res.isError
                 for (const c of res.content ?? []) {
                   if (c.type === 'text') output += (output ? '\n' : '') + c.text

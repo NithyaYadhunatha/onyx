@@ -31,13 +31,7 @@ const app = spawn(electron, [ROOT, ...(process.argv.includes('--show') ? ['--sho
 app.unref()
 console.log(`Onyx window ready: press ${config.hotkey} anywhere (or click the tray icon).`)
 
+// The core runs voice itself (and restarts it if it ever stops).
 if (config.voice.enabled) {
-  const voice = spawn(PYTHON, ['-X', 'utf8', join(ROOT, 'voice', 'voice.py')], {
-    cwd: ROOT,
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: true,
-  })
-  voice.unref()
   console.log(`Voice is on: say "${config.voice.wakeWord.replace('_', ' ')}" or press ${config.voice.pushToTalk}.`)
 }

@@ -31,6 +31,7 @@ export function onyxServers(config) {
     onyx_desktop: py('desktop/server.py', env),
     onyx_office: py('office/server.py', env),
     onyx_phone: py('phone/server.py', env),
+    onyx_system: py('system/server.py', env),
   }
 }
 

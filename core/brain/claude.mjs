@@ -80,7 +80,7 @@ export class ClaudeBrain {
         cwd: homedir(),
         // Onyx has a few dozen tools; loading them all up front saves the model
         // a tool-search round trip on every new conversation.
-        env: { ...process.env, ENABLE_TOOL_SEARCH: 'false' },
+        env: { ...process.env, ENABLE_TOOL_SEARCH: 'false', MCP_TOOL_TIMEOUT: '3600000' },
         // Load no settings files: your ~/.claude settings may allow-list Bash
         // or bypass permissions, and Onyx must be the only authority here.
         settingSources: [],

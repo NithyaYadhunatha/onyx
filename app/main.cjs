@@ -60,8 +60,18 @@ function createWindow() {
     },
   })
   win.loadFile(path.join(__dirname, 'index.html'))
+  // Hide when you click away, but only once the window really had focus:
+  // Windows sometimes refuses focus to a window that shows itself, and
+  // hiding on that first blur would make it vanish before you saw it.
+  let hadFocus = false
+  win.on('focus', () => {
+    hadFocus = true
+  })
+  win.on('hide', () => {
+    hadFocus = false
+  })
   win.on('blur', () => {
-    if (!pinned && !mustStay && !win.webContents.isDevToolsOpened()) win.hide()
+    if (hadFocus && !pinned && !mustStay && !win.webContents.isDevToolsOpened()) win.hide()
   })
   // Links open in the real browser, never inside Onyx.
   win.webContents.setWindowOpenHandler(({ url }) => {

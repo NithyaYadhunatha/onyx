@@ -29,7 +29,9 @@ export async function ensureCore(config = loadConfig(), { quiet = false } = {}) 
     detached: true,
     stdio: ['ignore', log, log],
     windowsHide: true,
-    env: process.env,
+    // Inside the Onyx window, process.execPath is Electron itself; this flag
+    // makes it behave as plain Node so the core runs as a normal process.
+    env: process.versions.electron ? { ...process.env, ELECTRON_RUN_AS_NODE: '1' } : process.env,
   })
   child.unref()
   for (let i = 0; i < 40; i++) {

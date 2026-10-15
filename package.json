@@ -19,7 +19,8 @@
     "cli": "node cli/onyx.mjs",
     "voice": "node scripts/voice.mjs",
     "autostart": "node scripts/autostart.mjs",
-    "test": "node --test tests/ && node scripts/pytest.mjs"
+    "test": "node --test \"tests/**/*.test.mjs\" && node scripts/pytest.mjs",
+    "test:e2e": "node tests/e2e.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.220",

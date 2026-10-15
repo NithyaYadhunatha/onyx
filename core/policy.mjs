@@ -197,6 +197,14 @@ export function describe(toolName, input = {}) {
       return `Call ${i.number}`
     case 'onyx_office.expense_add':
       return `Add ${i.transactions?.length ?? 0} transactions to the expense sheet`
+    case 'onyx.remember':
+      return `Remember: ${i.text}`
+    case 'onyx.recall':
+      return `Recall: ${i.query}`
+    case 'onyx.ask_user':
+      return `Ask you: ${i.question}`
+    case 'onyx.notify':
+      return `Notify: ${i.title}`
     case 'onyx.schedule_task':
       return `Schedule "${i.name}" (${i.cron ?? i.at ?? i.trigger})`
     default: {

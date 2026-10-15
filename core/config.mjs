@@ -81,7 +81,8 @@ export const DEFAULTS = {
   voice: {
     enabled: false,
     wakeWord: 'hey_onyx',
-    pushToTalk: 'ctrl+alt+space',
+    // Ctrl+Alt+Space is taken by the Claude app, so Onyx uses Ctrl+Alt+O.
+    pushToTalk: 'ctrl+alt+o',
     whisperModel: 'base.en',
     piperVoice: 'en_US-lessac-medium',
   },

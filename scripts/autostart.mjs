@@ -1,40 +1,54 @@
 /**
- * npm run autostart              start Onyx when you sign in to Windows
- * npm run autostart -- --remove  stop doing that
- * node scripts/autostart.mjs --start-menu   add a Start menu shortcut
+ * Shortcuts to Onyx.
+ *
+ *   node scripts/autostart.mjs --desktop      desktop icon
+ *   node scripts/autostart.mjs --start-menu   Start menu entry
+ *   npm run autostart                         start Onyx when you sign in
+ *   add --remove to any of these to delete that shortcut
+ *
+ * Every shortcut opens the Onyx window directly. If admin mode is on
+ * (npm run elevate), the window relaunches itself with admin rights.
  */
 
 import { execFileSync } from 'node:child_process'
 import { existsSync, rmSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { ROOT } from '../core/config.mjs'
 
-const appData = process.env.APPDATA
-const startMenu = process.argv.includes('--start-menu')
-const folder = startMenu
-  ? join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs')
-  : join(appData, 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Startup')
-const link = join(folder, 'Onyx.lnk')
+const has = (f) => process.argv.includes(f)
+const where = has('--desktop') ? 'desktop' : has('--start-menu') ? 'start-menu' : 'startup'
 
-if (process.argv.includes('--remove')) {
+function folderFor(kind) {
+  if (kind === 'desktop') {
+    // The real Desktop, which OneDrive may have moved.
+    return execFileSync('powershell', ['-NoProfile', '-Command', "[Environment]::GetFolderPath('Desktop')"], { encoding: 'utf8' }).trim()
+  }
+  const programs = join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs')
+  return kind === 'start-menu' ? programs : join(programs, 'Startup')
+}
+
+const link = join(folderFor(where), 'Onyx.lnk')
+
+if (has('--remove')) {
   if (existsSync(link)) rmSync(link)
   console.log(`Removed ${link}`)
   process.exit(0)
 }
 
-const ps = (s) => s.replace(/'/g, "''")
+const electron = createRequire(import.meta.url)('electron')
+const ps = (s) => String(s).replace(/'/g, "''")
 execFileSync(
   'powershell',
   [
     '-NoProfile',
     '-Command',
     `$s=(New-Object -ComObject WScript.Shell).CreateShortcut('${ps(link)}');` +
-      `$s.TargetPath='${ps(process.execPath)}';` +
-      `$s.Arguments='"${ps(join(ROOT, 'scripts', 'start.mjs'))}"${startMenu ? ' --show' : ''}';` +
+      `$s.TargetPath='${ps(electron)}';` +
+      `$s.Arguments='"${ps(ROOT)}"${where === 'startup' ? '' : ' --show'}';` +
       `$s.WorkingDirectory='${ps(ROOT)}';` +
-      `$s.IconLocation='${ps(join(ROOT, 'app', 'icon.ico'))}';` +
-      `$s.WindowStyle=7;` +
-      `$s.Description='Onyx AI agent';$s.Save()`,
+      `$s.IconLocation='${ps(join(ROOT, 'app', 'icon.ico'))},0';` +
+      `$s.Description='Onyx: your AI agent';$s.Save()`,
   ],
   { stdio: 'inherit' },
 )

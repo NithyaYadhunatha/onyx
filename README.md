@@ -69,13 +69,18 @@ not just the prompt:
 | | |
 |---|---|
 | `Alt+Space` | open or hide the Onyx window (from anywhere) |
+| Settings page | permissions (never ask / risky only / always ask), model, voice, SMS sync |
 | `Ctrl+Alt+Esc` | stop everything |
-| `Ctrl+Alt+Space` | push-to-talk (when voice is on) |
+| `Ctrl+Alt+O` | push-to-talk (when voice is on), or the mic button in the app |
 | "hey onyx" | wake word (when voice is on). Say the command in the same breath: "hey onyx, open Spotify" |
 | `npm run cli` | Onyx in a terminal (`npm run cli -- "do something"` for one request) |
 | `npm run cli -- tasks` | list scheduled tasks |
 | `npm run cli -- log` | today's actions |
 | `npm run voice` | voice in a terminal, to see what it hears |
+| `npm start` | (re)start Onyx: always picks up the latest code and settings |
+| `npm run stop` | stop Onyx completely |
+| `npm run elevate` | admin mode: installs without Windows prompts (`-- --remove` to undo) |
+| `node scripts/autostart.mjs --desktop` | desktop icon (`--start-menu` for the Start menu) |
 | `npm run autostart` | start Onyx when you sign in (`-- --remove` to undo) |
 
 Settings live in `%USERPROFILE%\.onyx\config.json`:

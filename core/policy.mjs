@@ -218,6 +218,52 @@ export function describe(toolName, input = {}) {
       return `Call ${i.number}`
     case 'onyx_office.expense_add':
       return `Add ${i.transactions?.length ?? 0} transactions to the expense sheet`
+    case 'onyx_system.install_app':
+      return `Install ${i.name_or_id}`
+    case 'onyx_system.uninstall_app':
+      return `Uninstall ${i.name_or_id}`
+    case 'onyx_system.update_apps':
+      return i.name_or_id ? `Update ${i.name_or_id}` : 'Update all apps'
+    case 'onyx_system.search_apps':
+      return `Search apps for "${i.query}"`
+    case 'onyx_system.list_installed':
+      return i.updates_only ? 'Check for app updates' : `List installed apps${i.query ? ` matching "${i.query}"` : ''}`
+    case 'onyx_system.system_info':
+      return 'Read system info'
+    case 'onyx_system.processes':
+      return `List running programs${i.query ? ` matching "${i.query}"` : ''}`
+    case 'onyx_system.kill_process':
+      return `Close ${i.name_or_pid}`
+    case 'onyx_system.power':
+      return `Power: ${i.action}${i.delay_seconds ? ` in ${i.delay_seconds}s` : ''}`
+    case 'onyx_system.volume':
+      return i.level >= 0 ? `Set volume to ${i.level}%` : i.mute ? `Mute ${i.mute}` : 'Read volume'
+    case 'onyx_system.brightness':
+      return `Set brightness to ${i.level}%`
+    case 'onyx_system.open_settings':
+      return `Open Settings: ${i.page}`
+    case 'onyx_system.wifi':
+      return `Wi-Fi: ${i.action ?? 'status'}${i.name ? ` ${i.name}` : ''}`
+    case 'onyx_system.dark_mode':
+      return i.on ? 'Turn on dark mode' : 'Turn on light mode'
+    case 'onyx_system.empty_recycle_bin':
+      return 'Empty the Recycle Bin'
+    case 'onyx_desktop.list_windows':
+      return 'Look at open windows'
+    case 'onyx_desktop.get_ui_tree':
+      return `Read the screen${i.window ? ` (${i.window})` : ''}`
+    case 'onyx_desktop.screenshot':
+      return 'Take a screenshot'
+    case 'onyx_desktop.focus_window':
+      return `Switch to ${i.window}`
+    case 'list_dir':
+      return `Look in ${i.path}`
+    case 'read_file':
+      return `Read ${i.path}`
+    case 'web_search':
+      return `Search the web: ${i.query}`
+    case 'web_fetch':
+      return `Read ${i.url}`
     case 'onyx.remember':
       return `Remember: ${i.text}`
     case 'onyx.recall':

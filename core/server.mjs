@@ -334,6 +334,25 @@ function onSocket(ws, req) {
         applySettings(msg.patch)
         send({ type: 'settings', settings: await settingsView() })
         break
+      case 'listen':
+        // The app's mic button: tell the voice loop to listen now.
+        hub.broadcast({ type: 'listen' })
+        if (!voice.running) send({ type: 'error', message: 'Voice is off. Turn it on in Settings.' })
+        break
+      case 'phone_connect': {
+        try {
+          const result = await toolbox.json('onyx_phone', 'connect', {
+            address: String(msg.address ?? ''),
+            pair_address: String(msg.pair_address ?? ''),
+            pairing_code: String(msg.code ?? ''),
+          })
+          send({ type: 'phone_result', ok: true, result })
+        } catch (err) {
+          send({ type: 'phone_result', ok: false, error: err.message })
+        }
+        send({ type: 'settings', settings: await settingsView() })
+        break
+      }
       case 'open_path': {
         // Only the places Onyx itself owns: settings, logs, the expense workbook.
         const allowed = { settings: dataPath('config.json'), logs: dataPath('logs'), expenses: config.expenses.workbook }
@@ -386,6 +405,9 @@ if (config.voice.enabled) voice.start()
 
 async function shutdown() {
   console.log('[onyx] shutting down')
+  // The window closes itself too, so a restart never leaves an old one behind.
+  hub.broadcast({ type: 'shutdown' })
+  await new Promise((r) => setTimeout(r, 300))
   scheduler.stop()
   phone.stop()
   voice.stop()

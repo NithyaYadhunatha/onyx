@@ -14,6 +14,19 @@ const { pathToFileURL } = require('node:url')
 const ROOT = path.join(__dirname, '..')
 const ICON = path.join(__dirname, 'icon.png')
 
+// Admin mode (npm run elevate) is a scheduled task that starts Onyx with admin
+// rights. When Onyx is opened any other way (desktop icon, Start menu), hand
+// over to that task so it always runs elevated.
+{
+  const { spawnSync } = require('node:child_process')
+  const isAdmin = spawnSync('net', ['session'], { stdio: 'ignore', windowsHide: true }).status === 0
+  const hasTask = !isAdmin && spawnSync('schtasks', ['/query', '/tn', 'Onyx'], { stdio: 'ignore', windowsHide: true }).status === 0
+  if (hasTask) {
+    spawnSync('schtasks', ['/run', '/tn', 'Onyx'], { stdio: 'ignore', windowsHide: true })
+    process.exit(0)
+  }
+}
+
 if (!app.requestSingleInstanceLock()) {
   app.quit()
   process.exit(0)
@@ -22,6 +35,7 @@ if (!app.requestSingleInstanceLock()) {
 let win = null
 let tray = null
 let pinned = false
+let quitting = false
 let mustStay = false // an approval or question is waiting
 let core = null // { config, token, dataPath }
 
@@ -35,23 +49,22 @@ async function loadCore() {
 
 function createWindow() {
   const { workArea } = screen.getPrimaryDisplay()
-  const width = 720
-  const height = 560
+  const width = Math.min(1220, workArea.width - 80)
+  const height = Math.min(800, workArea.height - 60)
   win = new BrowserWindow({
     width,
     height,
-    x: Math.round(workArea.x + (workArea.width - width) / 2),
-    y: Math.round(workArea.y + workArea.height * 0.12),
-    frame: false,
-    transparent: true,
-    resizable: true,
-    minWidth: 480,
-    minHeight: 320,
+    center: true,
+    minWidth: 760,
+    minHeight: 520,
     show: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    icon: ICON,
-    backgroundColor: '#00000000',
+    title: 'Onyx',
+    icon: path.join(__dirname, 'icon.ico'),
+    backgroundColor: '#09090d',
+    // Our own dark title bar, with Windows' real minimise/maximise/close
+    // buttons drawn on top of it.
+    titleBarStyle: 'hidden',
+    titleBarOverlay: { color: '#09090d', symbolColor: '#b8b2d6', height: 40 },
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,
@@ -60,18 +73,12 @@ function createWindow() {
     },
   })
   win.loadFile(path.join(__dirname, 'index.html'))
-  // Hide when you click away, but only once the window really had focus:
-  // Windows sometimes refuses focus to a window that shows itself, and
-  // hiding on that first blur would make it vanish before you saw it.
-  let hadFocus = false
-  win.on('focus', () => {
-    hadFocus = true
-  })
-  win.on('hide', () => {
-    hadFocus = false
-  })
-  win.on('blur', () => {
-    if (hadFocus && !pinned && !mustStay && !win.webContents.isDevToolsOpened()) win.hide()
+  // Closing the window keeps Onyx running in the tray; Quit is in the tray menu.
+  win.on('close', (e) => {
+    if (!quitting) {
+      e.preventDefault()
+      win.hide()
+    }
   })
   // Links open in the real browser, never inside Onyx.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -95,7 +102,7 @@ function show() {
 }
 
 function registerHotkey(accelerator) {
-  for (const key of [accelerator, 'Control+Alt+Space', 'Alt+Shift+O']) {
+  for (const key of [accelerator, 'Alt+Shift+O']) {
     try {
       if (key && globalShortcut.register(key, toggle)) return key
     } catch {}
@@ -104,6 +111,7 @@ function registerHotkey(accelerator) {
 }
 
 async function quitAll() {
+  quitting = true
   try {
     await fetch(`http://127.0.0.1:${core.config.port}/shutdown`, {
       method: 'POST',
@@ -142,6 +150,11 @@ ipcMain.handle('pair', async () => {
   return pair
 })
 ipcMain.on('hide', () => win?.hide())
+// The core is shutting down (a restart or Quit): close this window too.
+ipcMain.on('quit', () => {
+  quitting = true
+  app.exit(0)
+})
 ipcMain.on('pin', (_e, value) => {
   pinned = Boolean(value)
 })

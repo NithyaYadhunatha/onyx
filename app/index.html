@@ -7,54 +7,177 @@
       http-equiv="Content-Security-Policy"
       content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self' ws://127.0.0.1:* ws: wss:; img-src 'self' data:"
     />
-    <meta name="theme-color" content="#0b0b10" />
+    <meta name="theme-color" content="#09090d" />
     <title>Onyx</title>
     <link rel="icon" href="icon.png" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div id="shell">
-      <header id="bar">
+    <svg class="sprite" aria-hidden="true">
+      <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6a.5.5 0 0 1-.8-.4V16H6.5A2.5 2.5 0 0 1 4 13.5z" /></symbol>
+      <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4" /></symbol>
+      <symbol id="i-tasks" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 2.5M9 2h6" /></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5" /><path d="M11 18.5h2" /></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" /></symbol>
+      <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" /></symbol>
+      <symbol id="i-send" viewBox="0 0 24 24"><path d="M4.5 12h13M12.5 6l6 6-6 6" /></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2" /></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" /></symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13" /></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13" /></symbol>
+      <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" /></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" /></symbol>
+    </svg>
+
+    <div id="app">
+      <header id="titlebar">
         <div class="brand">
           <img src="icon.png" alt="" />
           <span>Onyx</span>
-          <span id="status" class="status">connecting…</span>
         </div>
-        <div class="actions">
-          <button id="btn-tasks" title="Scheduled tasks">Tasks</button>
-          <button id="btn-phone" class="desktop-only" title="Use Onyx from your phone">Phone</button>
-          <button id="btn-new" title="New conversation">New</button>
-          <button id="btn-pin" class="desktop-only" title="Keep this window open">Pin</button>
-          <button id="btn-stop" class="stop" title="Stop (Ctrl+Alt+Esc anywhere)">Stop</button>
-          <button id="btn-close" class="desktop-only icon" title="Hide (Esc)">✕</button>
-        </div>
+        <div class="title-status" id="title-status"></div>
       </header>
 
-      <main id="feed" aria-live="polite">
-        <div id="empty">
-          <img src="icon.png" alt="" />
-          <h1>What should I do?</h1>
-          <div class="examples">
-            <button>Organise my Downloads folder by file type</button>
-            <button>Add this month's PhonePe statement to my expense sheet</button>
-            <button>Open Excel and make a monthly budget template</button>
-            <button>Every Sunday at 8pm, send me my week's spending</button>
+      <nav id="sidebar" aria-label="Sections">
+        <button class="nav on" data-page="chat"><svg><use href="#i-chat" /></svg><span>Chat</span></button>
+        <button class="nav" data-page="activity"><svg><use href="#i-activity" /></svg><span>Activity</span></button>
+        <button class="nav" data-page="tasks"><svg><use href="#i-tasks" /></svg><span>Tasks</span></button>
+        <button class="nav" data-page="phone"><svg><use href="#i-phone" /></svg><span>Phone</span></button>
+        <button class="nav" data-page="settings"><svg><use href="#i-settings" /></svg><span>Settings</span></button>
+        <div class="side-foot">
+          <div class="pill" id="pill-brain"><i class="dot"></i><span>connecting…</span></div>
+          <div class="pill" id="pill-voice"><svg><use href="#i-mic" /></svg><span>voice off</span></div>
+          <button id="stop" class="stop-btn" title="Stop everything (Ctrl+Alt+Esc)"><svg><use href="#i-stop" /></svg><span>Stop</span></button>
+        </div>
+      </nav>
+
+      <main id="pages">
+        <!-- Chat -->
+        <section class="page on" id="page-chat">
+          <div class="chat-head">
+            <h1>Chat</h1>
+            <button class="ghost" id="new-chat"><svg><use href="#i-plus" /></svg><span>New chat</span></button>
           </div>
-        </div>
+          <div id="feed" aria-live="polite">
+            <div id="empty">
+              <div class="orb"><img src="icon.png" alt="" /></div>
+              <h2>What should Onyx do?</h2>
+              <p class="muted">Type a command or say <b>"hey onyx"</b>. Onyx does the whole thing and shows each step.</p>
+              <div class="chips">
+                <button>Install Valorant</button>
+                <button>Set up Python for me</button>
+                <button>Organise my Downloads folder by file type</button>
+                <button>Add my PhonePe statement to my expense sheet</button>
+                <button>What's using my RAM?</button>
+                <button>Every Sunday at 8pm, tell me what I spent this week</button>
+              </div>
+            </div>
+          </div>
+          <form id="composer" autocomplete="off">
+            <textarea id="input" rows="1" placeholder="Tell Onyx what to do…"></textarea>
+            <button type="button" id="mic" class="icon-btn" title="Speak (Ctrl+Alt+O)"><svg><use href="#i-mic" /></svg></button>
+            <button type="submit" id="send" class="send-btn" title="Send (Enter)"><svg><use href="#i-send" /></svg></button>
+          </form>
+        </section>
+
+        <!-- Activity -->
+        <section class="page" id="page-activity">
+          <div class="page-head">
+            <h1>Activity</h1>
+            <button class="ghost" id="log-refresh"><svg><use href="#i-refresh" /></svg><span>Refresh</span></button>
+          </div>
+          <p class="muted lead">Everything Onyx did today, newest first.</p>
+          <div id="log" class="list"></div>
+        </section>
+
+        <!-- Tasks -->
+        <section class="page" id="page-tasks">
+          <div class="page-head"><h1>Tasks</h1></div>
+          <p class="muted lead">Things Onyx does on its own: on a schedule, or when something happens. Create one by asking in Chat, e.g. "every day at 9pm, tell me what I spent today".</p>
+          <div id="tasks" class="list"></div>
+        </section>
+
+        <!-- Phone -->
+        <section class="page" id="page-phone">
+          <div class="page-head"><h1>Phone</h1></div>
+          <div class="card-grid">
+            <div class="panel">
+              <h3>Connection</h3>
+              <div id="devices" class="devices"></div>
+              <form id="phone-form" class="stack">
+                <label>Phone address (IP:port from Wireless debugging)<input id="ph-addr" placeholder="192.168.1.23:41235" /></label>
+                <details>
+                  <summary>First time? Pair with a code</summary>
+                  <label>Pairing address<input id="ph-pair" placeholder="192.168.1.23:37000" /></label>
+                  <label>Pairing code<input id="ph-code" inputmode="numeric" placeholder="6 digits" /></label>
+                </details>
+                <button class="primary" type="submit">Connect</button>
+                <div id="phone-msg" class="muted small"></div>
+              </form>
+            </div>
+            <div class="panel">
+              <h3>Set up once</h3>
+              <ol class="steps">
+                <li>On the phone: <b>Settings → About phone</b>, tap <b>Build number</b> 7 times.</li>
+                <li><b>Developer options → USB debugging</b> on, plug into this PC, tap <b>Allow</b>. Done.</li>
+                <li>Or without a cable: <b>Wireless debugging</b> on (same Wi-Fi), tap <b>Pair device with pairing code</b>, and fill in the form here.</li>
+              </ol>
+              <p class="muted small">Once connected, Onyx can use your phone's apps, and logs bank SMS into your expense sheet every 15 minutes.</p>
+            </div>
+            <div class="panel desktop-only" id="pair-panel">
+              <h3>Onyx on your phone</h3>
+              <div id="pair"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Settings -->
+        <section class="page" id="page-settings">
+          <div class="page-head"><h1>Settings</h1></div>
+          <div class="settings">
+            <div class="panel">
+              <h3>Permissions</h3>
+              <p class="muted small">How much Onyx asks before it acts.</p>
+              <div class="segmented" id="seg-approvals">
+                <button data-v="full"><b>Never ask</b><span>One command, done</span></button>
+                <button data-v="auto"><b>Risky only</b><span>Asks before deleting, sending, power</span></button>
+                <button data-v="ask"><b>Always ask</b><span>Every action needs your OK</span></button>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Brain</h3>
+              <div class="row">
+                <label class="grow">Model<select id="sel-model"></select></label>
+              </div>
+              <label class="toggle"><input type="checkbox" id="tg-think" /><span></span>Think before acting <em>smarter, slower</em></label>
+            </div>
+            <div class="panel">
+              <h3>Voice</h3>
+              <label class="toggle"><input type="checkbox" id="tg-voice" /><span></span>Listen for "hey onyx"</label>
+              <p class="muted small" id="voice-detail"></p>
+            </div>
+            <div class="panel">
+              <h3>Phone &amp; network</h3>
+              <label class="toggle"><input type="checkbox" id="tg-sms" /><span></span>Log bank SMS into the expense sheet</label>
+              <label class="toggle"><input type="checkbox" id="tg-lan" /><span></span>Let my phone use Onyx over Wi-Fi <em>restart Onyx after changing</em></label>
+            </div>
+            <div class="panel desktop-only">
+              <h3>Files</h3>
+              <div class="row wrap">
+                <button class="ghost" data-open="expenses"><svg><use href="#i-folder" /></svg><span>Expense sheet</span></button>
+                <button class="ghost" data-open="logs"><svg><use href="#i-folder" /></svg><span>Logs</span></button>
+                <button class="ghost" data-open="settings"><svg><use href="#i-folder" /></svg><span>Settings file</span></button>
+              </div>
+              <p class="muted small" id="hotkeys"></p>
+            </div>
+          </div>
+        </section>
       </main>
-
-      <section id="panel" hidden>
-        <div class="panel-head">
-          <h2 id="panel-title"></h2>
-          <button id="panel-close" class="icon">✕</button>
-        </div>
-        <div id="panel-body"></div>
-      </section>
-
-      <footer id="composer">
-        <textarea id="input" rows="1" placeholder="Ask Onyx to do something…" autocomplete="off"></textarea>
-        <button id="send" title="Send (Enter)">➤</button>
-      </footer>
+      <div id="toasts" aria-live="polite"></div>
     </div>
     <script src="renderer.js"></script>
   </body>

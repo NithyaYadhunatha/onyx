@@ -16,6 +16,8 @@
     "start": "node scripts/start.mjs",
     "core": "node core/server.mjs",
     "app": "electron .",
+    "stop": "node scripts/start.mjs --stop",
+    "elevate": "node scripts/elevate.mjs",
     "cli": "node cli/onyx.mjs",
     "voice": "node scripts/voice.mjs",
     "autostart": "node scripts/autostart.mjs",

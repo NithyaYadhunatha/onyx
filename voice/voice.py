@@ -45,7 +45,7 @@ def load_settings() -> dict:
             cfg = json.load(f)
     except Exception:
         pass
-    v = {"wakeWord": "hey_onyx", "pushToTalk": "ctrl+alt+space", "whisperModel": "base.en", "piperVoice": "en_US-lessac-medium"}
+    v = {"wakeWord": "hey_onyx", "pushToTalk": "ctrl+alt+o", "whisperModel": "base.en", "piperVoice": "en_US-lessac-medium"}
     v.update(cfg.get("voice") or {})
     port = int(os.environ.get("ONYX_PORT") or cfg.get("port") or 8765)
     with open(os.path.join(ONYX_HOME, "token"), encoding="utf-8") as f:
@@ -427,6 +427,8 @@ class Voice:
                 self.say(f"{m.get('title', '')}. {m.get('body', '')}")
             elif t == "stopped":
                 self.hush()
+            elif t == "listen":  # the mic button in the Onyx window
+                self.ears.ptt.set()
 
     def _listen_reply(self, prompt: str) -> str:
         self.say(prompt)

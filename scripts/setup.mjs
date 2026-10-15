@@ -121,6 +121,8 @@ async function main() {
     ])
     ok(`Whisper ${cfg.voice.whisperModel}`)
     voice = true
+  } else {
+    warn(voice ? 'Voice stays as it was.' : 'Skipped. Run `npm run setup` again any time to add voice.')
   }
 
   step('6. Settings')

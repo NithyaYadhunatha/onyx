@@ -110,6 +110,17 @@ async function body(req, limit = 2_000_000) {
   }
 }
 
+/** Epoch ms, or a local date-time string like "2026-10-12 14:30:11" (read as local time). */
+function toMs(v) {
+  if (v == null || v === '') return Date.now()
+  if (typeof v === 'number' || /^\d+$/.test(String(v))) {
+    const n = Number(v)
+    return n < 1e12 ? n * 1000 : n // seconds or milliseconds
+  }
+  const t = Date.parse(String(v).trim().replace(' ', 'T'))
+  return Number.isNaN(t) ? Date.now() : t
+}
+
 const json = (res, code, value) => {
   res.writeHead(code, { 'content-type': 'application/json' })
   res.end(JSON.stringify(value))
@@ -157,7 +168,7 @@ function handler(isLan) {
         const messages = list.map((m) => ({
           address: m.address ?? m.from ?? m.sender ?? m.number ?? '',
           body: m.body ?? m.text ?? m.message ?? m.content ?? '',
-          date_ms: Number(m.date_ms ?? m.date ?? m.timestamp ?? m.received ?? Date.now()),
+          date_ms: toMs(m.date_ms ?? m.date ?? m.timestamp ?? m.received),
         }))
         const result = await phone.ingest(messages, 'webhook')
         return json(res, 200, result)

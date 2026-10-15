@@ -56,7 +56,11 @@ export const DEFAULTS = {
     adbPath: '',
   },
   expenses: {
-    workbook: join(homedir(), 'Documents', 'Onyx', 'Expenses.xlsx'),
+    // With a custom ONYX_HOME (tests, a second profile) the workbook lives
+    // there too, so it never touches your real Documents.
+    workbook: process.env.ONYX_HOME
+      ? join(process.env.ONYX_HOME, 'Expenses.xlsx')
+      : join(homedir(), 'Documents', 'Onyx', 'Expenses.xlsx'),
   },
   // Serve the phone web app and the SMS webhook to your Wi-Fi network.
   // Off by default: only this PC can reach Onyx until you turn it on.

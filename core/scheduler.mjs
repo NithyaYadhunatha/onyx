@@ -56,6 +56,11 @@ export class Scheduler {
     if (trigger === 'file' && !(folder && existsSync(folder))) {
       throw new Error('a file trigger needs an existing folder to watch')
     }
+    // Models sometimes repeat a call: the same task twice is one task.
+    const same = this.tasks.find(
+      (t) => t.name.toLowerCase() === name.toLowerCase() && t.cron === cron && t.at === at && t.trigger === trigger && t.folder === folder,
+    )
+    if (same) return { ...same, next: this.#next(same), note: 'This task already exists.' }
     const task = {
       id: randomUUID().slice(0, 8),
       name,

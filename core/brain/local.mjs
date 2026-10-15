@@ -177,6 +177,7 @@ export class LocalBrain {
     this.allTools = null
     this.vision = null
     this.phoneActive = false
+    this.numGpu = this.cfg.numGpu ?? null
   }
 
   async #tools() {
@@ -205,7 +206,7 @@ export class LocalBrain {
 
   /** Keep the conversation inside the context window, oldest bulk first. */
   #trim() {
-    const budget = (this.cfg.numCtx ?? 24576) * 3.2 * 0.55 // chars, leaving room for tools and the reply
+    const budget = (this.cfg.numCtx ?? 16384) * 3.2 * 0.55 // chars, leaving room for tools and the reply
     const size = () => this.messages.reduce((n, m) => n + String(m.content ?? '').length + (m.images?.length ?? 0) * 3000, 0)
     // 1. Only the latest screenshot stays as an image.
     let seenImage = false
@@ -232,19 +233,36 @@ export class LocalBrain {
   }
 
   async *#chatOllama(tools, signal) {
-    const res = await fetch(`${this.base}/api/chat`, {
-      method: 'POST',
-      signal,
-      body: JSON.stringify({
-        model: this.cfg.model,
-        messages: this.messages,
-        tools,
-        stream: true,
-        think: Boolean(this.cfg.think),
-        keep_alive: this.cfg.keepAlive ?? '30m',
-        options: { num_ctx: this.cfg.numCtx ?? 24576, temperature: this.cfg.temperature ?? 0.3 },
-      }),
-    })
+    const request = (numGpu) =>
+      fetch(`${this.base}/api/chat`, {
+        method: 'POST',
+        signal,
+        body: JSON.stringify({
+          model: this.cfg.model,
+          messages: this.messages,
+          tools,
+          stream: true,
+          think: Boolean(this.cfg.think),
+          keep_alive: this.cfg.keepAlive ?? '30m',
+          options: {
+            num_ctx: this.cfg.numCtx ?? 16384,
+            temperature: this.cfg.temperature ?? 0.3,
+            ...(numGpu != null && { num_gpu: numGpu }),
+          },
+        }),
+      })
+    let res = await request(this.numGpu)
+    if (!res.ok && this.numGpu != null) {
+      const err = await res.text()
+      if (/memory|cuda|alloc|unable to load|offload/i.test(err)) {
+        // Too much for this GPU: let Ollama decide from now on.
+        console.error(`[onyx] model does not fit fully on the GPU (${err.slice(0, 120)}); using Ollama's default split`)
+        this.numGpu = null
+        res = await request(null)
+      } else {
+        throw new Error(`${res.status} ${err.slice(0, 300)}`)
+      }
+    }
     if (!res.ok) throw new Error(`${res.status} ${(await res.text()).slice(0, 300)}`)
     const decoder = new TextDecoder()
     let buf = ''

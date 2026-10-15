@@ -40,7 +40,11 @@ export const DEFAULTS = {
     model: 'qwen3.5:4b',
     // Tokens the model can hold at once. More remembers more of a long task,
     // but uses more GPU memory.
-    numCtx: 24576,
+    numCtx: 16384,
+    // Model layers on the GPU. 99 = all of them: on a 4 GB GPU this is about
+    // 4x faster than Ollama's cautious default. If the GPU runs out of
+    // memory, Onyx falls back to Ollama's choice automatically.
+    numGpu: 99,
     // Let the model reason before acting: smarter, slower.
     think: false,
     temperature: 0.3,

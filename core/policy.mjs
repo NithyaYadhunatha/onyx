@@ -96,6 +96,8 @@ const BUILTIN = {
   shell: 'act',
   read_file: 'read',
   list_dir: 'read',
+  web_search: 'read',
+  web_fetch: 'read',
   write_file: 'act',
 }
 

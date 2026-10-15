@@ -29,16 +29,24 @@ export const PYTHON =
 
 export const DEFAULTS = {
   port: 8765,
-  // "claude" runs the Claude Agent SDK on your Claude Code login (no API key).
-  // "local" runs any OpenAI-compatible server, e.g. Ollama or LM Studio, so
-  // Onyx can work fully offline and free.
-  brain: 'claude',
+  // "local" runs an open model on this PC through Ollama: free, offline, private.
+  // "claude" runs the Claude Agent SDK on your Claude Code login instead.
+  brain: 'local',
   claude: { model: 'claude-sonnet-5-5', effort: 'medium', maxTurns: 60 },
   local: {
-    baseUrl: 'http://127.0.0.1:11434/v1',
-    model: 'qwen2.5:7b-instruct',
-    apiKey: 'ollama',
-    maxSteps: 30,
+    // "ollama" (native API), or "openai" for LM Studio, llama.cpp, vLLM...
+    provider: 'ollama',
+    baseUrl: 'http://127.0.0.1:11434',
+    model: 'qwen3.5:4b',
+    // Tokens the model can hold at once. More remembers more of a long task,
+    // but uses more GPU memory.
+    numCtx: 24576,
+    // Let the model reason before acting: smarter, slower.
+    think: false,
+    temperature: 0.3,
+    maxSteps: 40,
+    keepAlive: '30m',
+    apiKey: '',
   },
   // ask: every action waits for your OK. auto: actions run, dangerous ones ask.
   approvals: 'ask',

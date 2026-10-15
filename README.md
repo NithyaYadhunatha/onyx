@@ -30,9 +30,9 @@ files, apps, Excel, the web, your phone. It asks before anything risky.
 
 ## Install
 
-You need **Windows 10/11**, **Node.js 20+** and **Python 3.10+**, plus one of:
-- a **Claude Code** login (Pro/Max subscription, no API key needed), or
-- a **free local model** through [Ollama](https://ollama.com) (see "Local brain" below).
+You need **Windows 10/11**, **Node.js 20+** and **Python 3.10+**. The brain is an open model
+running on your own PC through [Ollama](https://ollama.com): no account, no API key, no bill,
+and nothing leaves your machine.
 
 ```bash
 npm install
@@ -40,11 +40,9 @@ npm run setup
 npm start
 ```
 
-`npm run setup` builds the Python environment and asks before each optional download:
-adb for phone control (~13 MB, from Google) and the voice models (~220 MB). After that,
-press **Alt+Space** anywhere.
-
-If you have never logged in to Claude Code, setup shows you the one command to run.
+`npm run setup` builds the Python environment and asks before each download: Ollama
+(~1.5 GB) and the model `qwen3.5:4b` (~3.5 GB), adb for phone control (~13 MB, from Google)
+and the voice models (~220 MB). After that, press **Alt+Space** anywhere.
 
 ## Safety
 
@@ -84,8 +82,8 @@ Settings live in `%USERPROFILE%\.onyx\config.json`:
 
 ```jsonc
 {
-  "brain": "claude",                 // or "local"
-  "claude": { "model": "claude-sonnet-5-5", "effort": "medium" },
+  "brain": "local",                  // or "claude"
+  "local": { "model": "qwen3.5:4b", "numCtx": 24576, "think": false },
   "approvals": "ask",                // "auto": only risky actions ask
   "alwaysAllow": [],                 // e.g. ["onyx_office.*"]
   "hotkey": "Alt+Space",
@@ -100,23 +98,34 @@ Restart Onyx after changing them (tray icon → Quit Onyx, then `npm start`).
 
 **Phone setup** (adb, the phone web app, SMS forwarding): see [phone/README.md](phone/README.md).
 
-## Local brain (free, offline)
+## Choosing the brain
 
-1. Install [Ollama](https://ollama.com) and pull a model with tool calling:
-   `ollama pull qwen2.5:7b-instruct` (or `qwen2.5:3b-instruct` on a 4 GB GPU).
-2. Set `"brain": "local"` in the settings. `local.baseUrl` and `local.model` point at any
-   OpenAI-compatible server (Ollama, LM Studio, llama.cpp).
+**Local (default).** Any Ollama model with tool calling works. Pick one for your GPU memory:
 
-Small local models handle files, Excel, memory and phone tasks well, but they are much weaker
-than Claude at long multi-step GUI tasks, and they cannot see screenshots.
+| GPU memory | Model | Size |
+|---|---|---|
+| 4 GB | `qwen3.5:4b` (default: tools, vision, thinking) | ~3.5 GB |
+| 8 GB+ | `qwen3.5:9b` | ~7 GB |
+| 16 GB+ | `qwen3.6:27b` or `gemma4:26b` | ~17–20 GB |
+
+`ollama pull <model>`, then set `local.model`. Models with vision can read screenshots;
+the others use the UI tree only. `local.think: true` makes the model reason before each
+step: better on hard tasks, slower. For LM Studio, llama.cpp or vLLM, set
+`local.provider` to `"openai"` and `local.baseUrl` to the server's `/v1` URL.
+
+A 4B model is good at files, Excel, expenses, memory, scheduling, web lookups and short app
+tasks. For long multi-step GUI work, a bigger model does much better.
+
+**Claude (optional).** Set `"brain": "claude"` to use Claude Code headless through the Claude
+Agent SDK on your Claude Code login (no API key). Strongest at long GUI tasks.
 
 ## How it works
 
 ```
  faces                         core (Node)                          hands (MCP servers)
  ─────                         ───────────                          ───────────────────
- hotkey window (Electron) ─┐   brain: Claude Agent SDK               onyx_desktop  UI Automation,
- voice (Python)           ─┼─► or a local OpenAI-compatible model ─► screenshots, mouse, keyboard
+ hotkey window (Electron) ─┐   brain: open model via Ollama          onyx_desktop  UI Automation,
+ voice (Python)           ─┼─► (or Claude Agent SDK)             ─► screenshots, mouse, keyboard
  phone web app            ─┤   approval gate (every tool call)       onyx_office   Excel, statements,
  terminal                 ─┘   memory · scheduler · action log        SMS, expenses
                                phone SMS sync                         onyx_phone    adb

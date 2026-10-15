@@ -12,7 +12,7 @@
  *   npm run setup -- --no-downloads   skip all downloads
  */
 
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFileSync, spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -75,13 +75,49 @@ async function main() {
 
   step('3. The brain')
   const cfg = loadConfig()
-  const creds = join(homedir(), '.claude', '.credentials.json')
-  if (existsSync(creds) || process.env.ANTHROPIC_API_KEY) {
-    ok('Claude Code login found: Onyx will use it (no API key needed)')
+  if (cfg.brain === 'local') {
+    const ollama = [
+      join(process.env.LOCALAPPDATA ?? '', 'Programs', 'Ollama', 'ollama.exe'),
+      'C:\\Program Files\\Ollama\\ollama.exe',
+    ].find((p) => existsSync(p))
+    if (ollama) {
+      ok('Ollama is installed')
+    } else if (!NO_DL && (await ask('Download and install Ollama (open-source local model runner) from ollama.com, about 1.3 GB?'))) {
+      const exe = join(ROOT, 'tools', 'OllamaSetup.exe')
+      mkdirSync(join(ROOT, 'tools'), { recursive: true })
+      run('powershell', ['-NoProfile', '-Command', `$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri https://ollama.com/download/OllamaSetup.exe -OutFile '${exe}'`])
+      run(exe, ['/VERYSILENT', '/NORESTART', '/SUPPRESSMSGBOXES'])
+      ok('Ollama installed')
+    } else {
+      warn('Onyx needs Ollama for its local brain: install it from https://ollama.com, or set "brain": "claude".')
+    }
+    const bin = ollama ?? join(process.env.LOCALAPPDATA ?? '', 'Programs', 'Ollama', 'ollama.exe')
+    if (existsSync(bin)) {
+      let have = ''
+      for (let i = 0; i < 20 && !have; i++) {
+        try {
+          const r = await fetch(`${cfg.local.baseUrl.replace(/\/v1\/?$/, '')}/api/tags`)
+          have = (await r.json()).models.map((m) => m.name).join(' ')
+        } catch {
+          if (i === 0) spawn(bin, ['serve'], { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+          await new Promise((r) => setTimeout(r, 500))
+        }
+      }
+      if (have.split(' ').includes(cfg.local.model)) ok(`model ${cfg.local.model} is ready`)
+      else if (!NO_DL && (await ask(`Download the open model ${cfg.local.model} (about 3.5 GB)?`))) {
+        run(bin, ['pull', cfg.local.model])
+        ok(`model ${cfg.local.model} is ready`)
+      } else warn(`Later, run: ollama pull ${cfg.local.model}`)
+    }
   } else {
-    warn('No Claude Code login found. Log in once with:')
-    console.log(`     "${join(ROOT, 'node_modules', '@anthropic-ai', 'claude-agent-sdk-win32-x64', 'claude.exe')}"`)
-    console.log('     then type /login. Or use a free local model instead (see README: "Local brain").')
+    const creds = join(homedir(), '.claude', '.credentials.json')
+    if (existsSync(creds) || process.env.ANTHROPIC_API_KEY) {
+      ok('Claude Code login found: Onyx will use it (no API key needed)')
+    } else {
+      warn('No Claude Code login found. Log in once with:')
+      console.log(`     "${join(ROOT, 'node_modules', '@anthropic-ai', 'claude-agent-sdk-win32-x64', 'claude.exe')}"`)
+      console.log('     then type /login. Or set "brain": "local" to use a free open model.')
+    }
   }
 
   step('4. Phone control (optional)')

@@ -283,6 +283,7 @@ class Voice:
         self.client_id = None
         self.my_turn = None
         self.buffer = ""
+        self.spoke = False
         self.stop = threading.Event()
         self.say_queue: queue.Queue[str | None] = queue.Queue()
 
@@ -341,7 +342,7 @@ class Voice:
                 self.client_id = m["clientId"]
                 log("connected to Onyx")
             elif t == "turn_start" and m.get("clientId") == self.client_id:
-                self.my_turn, self.buffer = m["turn"], ""
+                self.my_turn, self.buffer, self.spoke = m["turn"], "", False
             elif t == "text" and m.get("turn") == self.my_turn:
                 self.buffer += m["delta"]
                 # Speak each finished sentence as soon as it arrives.
@@ -350,9 +351,14 @@ class Voice:
                     if not mm or (mm.end() == len(self.buffer) and not self.buffer.endswith((" ", "\n"))):
                         break
                     self.say(mm.group(1))
+                    self.spoke = True
                     self.buffer = self.buffer[mm.end():]
             elif t in ("done", "error") and m.get("turn") == self.my_turn:
-                rest = self.buffer.strip() or (m.get("message") if t == "error" else "")
+                rest = self.buffer.strip()
+                if t == "error":
+                    rest = rest or m.get("message", "")
+                elif not rest and not self.spoke:
+                    rest = m.get("text", "")  # the reply arrived all at once
                 if rest:
                     self.say(rest)
                 self.my_turn, self.buffer = None, ""

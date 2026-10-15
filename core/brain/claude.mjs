@@ -22,6 +22,13 @@ const DISALLOWED = [
   'ExitWorktree',
 ]
 
+/** Our environment for Claude Code, minus the flag the Onyx window sets for us. */
+function childEnv(extra) {
+  const env = { ...process.env, ...extra }
+  delete env.ELECTRON_RUN_AS_NODE
+  return env
+}
+
 const FAILURES = {
   error_max_turns: 'I hit my step limit for one task. Tell me to continue if you want me to keep going.',
   error_during_execution: 'Something went wrong while I was working on that.',
@@ -80,7 +87,8 @@ export class ClaudeBrain {
         cwd: homedir(),
         // Onyx has a few dozen tools; loading them all up front saves the model
         // a tool-search round trip on every new conversation.
-        env: { ...process.env, ENABLE_TOOL_SEARCH: 'false', MCP_TOOL_TIMEOUT: '3600000' },
+        // MCP_TIMEOUT: tool servers get 90s to start (a busy PC, first run).
+        env: childEnv({ ENABLE_TOOL_SEARCH: 'false', MCP_TIMEOUT: '90000', MCP_TOOL_TIMEOUT: '3600000' }),
         // Load no settings files: your ~/.claude settings may allow-list Bash
         // or bypass permissions, and Onyx must be the only authority here.
         settingSources: [],
@@ -199,7 +207,7 @@ export class ClaudeBrain {
         }
         case 'system':
           if (msg.subtype === 'init') {
-            const failed = (msg.mcp_servers ?? []).filter((s) => s.status === 'failed').map((s) => s.name)
+            const failed = (msg.mcp_servers ?? []).filter((s) => s.status === 'failed').map((s) => `${s.name}${s.error ? ` (${s.error})` : ''}`)
             if (failed.length) console.error(`[onyx] tool servers that failed to start: ${failed.join(', ')}`)
           }
           break

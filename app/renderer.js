@@ -3,7 +3,11 @@
 
 ;(() => {
   const isDesktop = typeof window.onyx !== 'undefined'
+  const params = new URLSearchParams(location.search)
+  // The desktop runs this page twice: as the corner widget and as the full app.
+  const isWidget = isDesktop && params.get('mode') === 'widget'
   if (!isDesktop) document.body.classList.add('web')
+  if (isWidget) document.body.classList.add('widget', 'collapsed')
 
   const $ = (sel, root = document) => root.querySelector(sel)
   const $$ = (sel, root = document) => [...root.querySelectorAll(sel)]
@@ -105,6 +109,7 @@
 
   function setBusy(busy, queued = 0) {
     document.body.classList.toggle('busy', busy)
+    $('#wstatus').textContent = busy ? 'Working…' : ''
     const t = $('#title-status')
     t.className = `title-status${busy ? ' busy' : ''}`
     t.textContent = busy ? (queued ? `Working… ${queued} queued` : 'Working…') : ''
@@ -138,8 +143,11 @@
   }
   $$('.nav').forEach((n) => n.addEventListener('click', () => go(n.dataset.page)))
 
+  const pendingCount = () => [...cards.values()].filter((c) => !c.classList.contains('done')).length
+
   function pendingBadge() {
-    const n = [...cards.values()].filter((c) => !c.classList.contains('done')).length
+    const n = pendingCount()
+    $('.orb-badge').textContent = n || ''
     const chat = $('.nav[data-page=chat]')
     let b = $('.badge', chat)
     if (!n) return b?.remove()
@@ -590,6 +598,34 @@
   }
 
   if (isDesktop) window.onyx.onFocusInput(() => page === 'chat' && input.focus())
+
+  // ---------------------------------------------------------------- widget
+
+  if (isWidget) {
+    const expand = (open) => window.onyx.expand(open)
+    $('#orb').addEventListener('click', () => expand(true))
+    $('#w-min').addEventListener('click', () => expand(false))
+    $('#w-app').addEventListener('click', () => window.onyx.openApp('chat'))
+    $('#w-settings').addEventListener('click', () => window.onyx.openApp('settings'))
+    $('#w-new').addEventListener('click', () => send({ type: 'reset' }))
+    $('#w-stop').addEventListener('click', () => send({ type: 'stop' }))
+    window.onyx.onWidgetState((open) => {
+      document.body.classList.toggle('collapsed', !open)
+      if (open) {
+        input.focus()
+        feed.scrollTop = feed.scrollHeight
+      }
+    })
+    document.addEventListener('keydown', (e) => e.key === 'Escape' && expand(false))
+    // Click away and it tucks back into the corner, unless it is working or
+    // waiting for your answer.
+    window.addEventListener('blur', () => {
+      if (!document.body.classList.contains('busy') && !pendingCount()) expand(false)
+    })
+  } else if (isDesktop) {
+    window.onyx.onGoto((p) => go(p))
+    if (params.get('page')) go(params.get('page'))
+  }
   // Voice state changes on its own (it starts, restarts): keep the pill fresh.
   setInterval(() => connected && send({ type: 'settings' }), 15_000)
   input.focus()

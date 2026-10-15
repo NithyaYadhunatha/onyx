@@ -30,8 +30,12 @@
       <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13" /></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13" /></symbol>
       <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2V17a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" /></symbol>
+      <symbol id="i-expand" viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></symbol>
+      <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12" /></symbol>
       <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4h-4" /></symbol>
     </svg>
+
+    <button id="orb" title="Onyx (Alt+Space)" aria-label="Open Onyx"><img src="icon.png" alt="" /><span class="orb-badge"></span></button>
 
     <div id="app">
       <header id="titlebar">
@@ -58,6 +62,16 @@
       <main id="pages">
         <!-- Chat -->
         <section class="page on" id="page-chat">
+          <div id="wbar">
+            <img src="icon.png" alt="" />
+            <span class="wtitle">Onyx</span>
+            <span class="wstatus" id="wstatus"></span>
+            <button class="wbtn" id="w-stop" title="Stop">Stop</button>
+            <button class="wbtn icon" id="w-new" title="New chat"><svg><use href="#i-plus" /></svg></button>
+            <button class="wbtn icon" id="w-app" title="Open full app"><svg><use href="#i-expand" /></svg></button>
+            <button class="wbtn icon" id="w-settings" title="Settings"><svg><use href="#i-settings" /></svg></button>
+            <button class="wbtn icon" id="w-min" title="Minimise"><svg><use href="#i-minus" /></svg></button>
+          </div>
           <div class="chat-head">
             <h1>Chat</h1>
             <button class="ghost" id="new-chat"><svg><use href="#i-plus" /></svg><span>New chat</span></button>

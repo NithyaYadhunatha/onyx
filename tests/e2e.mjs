@@ -21,7 +21,12 @@ const env = { ...process.env, ONYX_HOME: home, ONYX_PORT: '8799' }
 const core = spawn(process.execPath, ['core/server.mjs'], { env, cwd: join(import.meta.dirname, '..') })
 core.stdout.on('data', (d) => process.stdout.write('[core] ' + d))
 core.stderr.on('data', (d) => process.stdout.write('[core!] ' + d))
-await new Promise((r) => setTimeout(r, 2500))
+// Wait until the core answers (a cold start can take several seconds).
+for (let i = 0; i < 120; i++) {
+  const up = await fetch('http://127.0.0.1:8799/health').then((r) => r.ok, () => false)
+  if (up && existsSync(join(home, 'token'))) break
+  await new Promise((r) => setTimeout(r, 250))
+}
 
 const token = readFileSync(join(home, 'token'), 'utf8').trim()
 const ws = new WebSocket('ws://127.0.0.1:8799/ws')

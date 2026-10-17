@@ -54,6 +54,21 @@ hub = new Hub({ config, servers, toolbox, scheduler })
 const phone = new PhoneSync({ config, toolbox, scheduler, hub })
 const voice = new VoiceProcess(config)
 
+// ---- Claude sign-in --------------------------------------------------------
+
+const CLAUDE_EXE = join(ROOT, 'node_modules', '@anthropic-ai', 'claude-agent-sdk-win32-x64', 'claude.exe')
+let lastLogin = 0
+function openClaudeLogin({ force = false } = {}) {
+  if (!force && Date.now() - lastLogin < 10 * 60_000) return false
+  lastLogin = Date.now()
+  // A visible console window: it opens the browser sign-in and shows its code.
+  // Detached on Windows means its own console window, where the sign-in runs.
+  spawn(CLAUDE_EXE, ['auth', 'login'], { detached: true, stdio: 'ignore', windowsHide: false }).unref()
+  hub.notify('Sign in to Claude', 'Approve the sign-in in your browser. Onyx uses the local model until then.')
+  return true
+}
+hub.onClaudeLoginExpired = () => openClaudeLogin()
+
 // ---- settings the app can change while Onyx runs --------------------------
 
 const SETTABLE = {
@@ -334,6 +349,9 @@ function onSocket(ws, req) {
       case 'set_settings':
         applySettings(msg.patch)
         send({ type: 'settings', settings: await settingsView() })
+        break
+      case 'claude_login':
+        openClaudeLogin({ force: true })
         break
       case 'listen':
         // The app's mic button: tell the voice loop to listen now.

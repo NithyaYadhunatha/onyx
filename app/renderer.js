@@ -514,6 +514,7 @@
     setSetting(brain === 'claude' ? { brain: 'claude' } : { brain: 'local', 'local.model': e.target.value.slice(6) })
   })
   $('#tg-think').addEventListener('change', (e) => setSetting({ 'local.think': e.target.checked }))
+  $('#claude-login').addEventListener('click', () => send({ type: 'claude_login' }))
   $('#tg-voice').addEventListener('change', (e) => setSetting({ 'voice.enabled': e.target.checked }))
   $('#tg-sms').addEventListener('change', (e) => setSetting({ 'phone.smsSync': e.target.checked }))
   $('#tg-lan').addEventListener('change', (e) => setSetting({ 'lan.enabled': e.target.checked }))

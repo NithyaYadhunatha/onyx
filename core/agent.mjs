@@ -143,8 +143,10 @@ export class Hub {
     if (brain instanceof ClaudeBrain && !turn.retried && (errored || final.length < 400) && CLAUDE_DOWN.test(final)) {
       turn.retried = true
       this.claudeDownUntil = Date.now() + 15 * 60_000
-      const why = /auth|oauth|login|401|credential/i.test(final) ? 'Claude login has expired' : 'Claude is unavailable'
-      this.broadcast({ type: 'error', turn: turn.id, message: `${why}, so the local model is doing this instead. To use Claude again, log in to Claude Code (see Settings).` })
+      const loginProblem = /auth|oauth|login|credential/i.test(final)
+      const why = loginProblem ? 'Claude login has expired' : 'Claude is unavailable'
+      if (loginProblem) this.onClaudeLoginExpired?.()
+      this.broadcast({ type: 'error', turn: turn.id, message: `${why}, so the local model is doing this instead.${loginProblem ? ' A Claude sign-in window has opened: approve it in your browser to switch back.' : ''}` })
       brain.close()
       if (!turn.background) this.brain = null
       const local = turn.background ? this.#makeBrain({ background: true }) : (this.brain = this.#makeBrain())

@@ -5,10 +5,10 @@
 import { homedir, hostname, userInfo } from 'node:os'
 import { pinnedMemories } from './memory.mjs'
 
-export function systemPrompt(config, { background = false, voice = false } = {}) {
+export function systemPrompt(config, { background = false, voice = false, local: forceLocal } = {}) {
   const now = new Date()
   const memories = pinnedMemories()
-  const local = config.brain === 'local'
+  const local = forceLocal ?? config.brain === 'local'
   return `You are Onyx, a personal AI agent running on ${userInfo().username}'s Windows PC (${hostname()}). You do real work on their computer and their Android phone by using tools. You are not a chatbot that explains how to do things: when asked to do something, do it.
 
 Now: ${now.toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'short' })} (${Intl.DateTimeFormat().resolvedOptions().timeZone}). Home folder: ${homedir()}.

@@ -241,7 +241,7 @@ function resultSummary(content) {
 function friendlyError(err) {
   const s = String(err?.message ?? err)
   if (/login|auth|credential|401/i.test(s)) {
-    return 'Claude Code is not logged in. Run "npx claude" once in a terminal and log in, then try again.'
+    return 'Failed to authenticate: Claude Code is not logged in.'
   }
   if (/rate|429|usage limit/i.test(s)) return 'Claude usage limit reached for now. Try again later, or switch Onyx to the local brain.'
   return `Claude error: ${s.slice(0, 300)}`

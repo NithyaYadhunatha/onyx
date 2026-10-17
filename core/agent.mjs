@@ -18,6 +18,9 @@ import { onyxTools, sdkServer } from './tools.mjs'
 import { ClaudeBrain } from './brain/claude.mjs'
 import { LocalBrain } from './brain/local.mjs'
 
+/** What Claude says when it cannot work at all: a dead login, no usage left. */
+const CLAUDE_DOWN = /failed to authenticate|oauth session|not logged in|invalid api key|authentication_error|usage limit reached|credit balance is too low|overloaded_error/i
+
 export class Hub {
   constructor({ config, servers, toolbox, scheduler }) {
     this.config = config
@@ -68,8 +71,9 @@ export class Hub {
   // ---- brains ------------------------------------------------------------
 
   #makeBrain({ background = false, voice = false } = {}) {
-    const prompt = systemPrompt(this.config, { background, voice })
-    if (this.config.brain === 'local') {
+    const local = this.config.brain === 'local' || Date.now() < (this.claudeDownUntil ?? 0)
+    const prompt = systemPrompt(this.config, { background, voice, local })
+    if (local) {
       return new LocalBrain({ config: this.config, toolbox: this.toolbox, onyxTools: this.tools, systemPrompt: prompt })
     }
     return new ClaudeBrain({
@@ -132,6 +136,28 @@ export class Hub {
     })
     logAction({ kind: 'turn', turn: turn.id, source: turn.source, input: turn.text })
 
+    let { final, errored } = await this.#attempt(turn, brain)
+
+    // Claude's login expired or its usage ran out: do the task with the local
+    // model instead of failing, and keep using it for a while.
+    if (brain instanceof ClaudeBrain && !turn.retried && (errored || final.length < 400) && CLAUDE_DOWN.test(final)) {
+      turn.retried = true
+      this.claudeDownUntil = Date.now() + 15 * 60_000
+      const why = /auth|oauth|login|401|credential/i.test(final) ? 'Claude login has expired' : 'Claude is unavailable'
+      this.broadcast({ type: 'error', turn: turn.id, message: `${why}, so the local model is doing this instead. To use Claude again, log in to Claude Code (see Settings).` })
+      brain.close()
+      if (!turn.background) this.brain = null
+      const local = turn.background ? this.#makeBrain({ background: true }) : (this.brain = this.#makeBrain())
+      turn.brain = local
+      ;({ final, errored } = await this.#attempt(turn, local))
+    }
+
+    if (!errored) this.broadcast({ type: 'done', turn: turn.id, text: final })
+    logAction({ kind: 'turn_end', turn: turn.id, ok: !errored, result: final })
+    return final
+  }
+
+  async #attempt(turn, brain) {
     // A spoken request gets a spoken-style answer without a separate session.
     const text = turn.voice ? `${turn.text}\n\n(Spoken request: answer in one to three short spoken sentences.)` : turn.text
     const ctx = { gate: (name, input, id) => this.#gate(turn, name, input, id) }
@@ -159,9 +185,7 @@ export class Hub {
       for (const [id, a] of this.pendingApprovals) if (a.turn === turn.id) this.#closeApproval(id, 'deny')
       for (const [id, q] of this.pendingQuestions) if (q.turn === turn.id) this.#closeQuestion(id, '(no answer)')
     }
-    if (!errored) this.broadcast({ type: 'done', turn: turn.id, text: final })
-    logAction({ kind: 'turn_end', turn: turn.id, ok: !errored, result: final })
-    return final
+    return { final, errored }
   }
 
   /** The kill switch. Stops the running turn and everything queued. */

@@ -43,7 +43,7 @@ const scheduler = new Scheduler((task, event) => {
     .submit(`Scheduled task "${task.name}":\n${task.prompt}${detail}`, {
       source: 'task',
       background: true,
-      label: `⏰ ${task.name}`,
+      label: `Scheduled task: ${task.name}`,
     })
     .then((result) => {
       hub.notify(`Onyx: ${task.name}`, String(result).slice(0, 240) || 'Done.')

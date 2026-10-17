@@ -78,16 +78,12 @@
           </div>
           <div id="feed" aria-live="polite">
             <div id="empty">
-              <div class="orb"><img src="gem.png" alt="" /></div>
-              <h2>What should Onyx do?</h2>
-              <p class="muted">Type a command or say <b>"hey onyx"</b>. Onyx does the whole thing and shows each step.</p>
+              <p>Tell Onyx what to do on this PC or your phone. For example:</p>
               <div class="chips">
-                <button>Install Valorant</button>
-                <button>Set up Python for me</button>
-                <button>Organise my Downloads folder by file type</button>
-                <button>Add my PhonePe statement to my expense sheet</button>
+                <button>Install VS Code</button>
                 <button>What's using my RAM?</button>
-                <button>Every Sunday at 8pm, tell me what I spent this week</button>
+                <button>Organise my Downloads folder by file type</button>
+                <button>How much did I spend this month?</button>
               </div>
             </div>
           </div>
@@ -111,7 +107,7 @@
         <!-- Tasks -->
         <section class="page" id="page-tasks">
           <div class="page-head"><h1>Tasks</h1></div>
-          <p class="muted lead">Things Onyx does on its own: on a schedule, or when something happens. Create one by asking in Chat, e.g. "every day at 9pm, tell me what I spent today".</p>
+          <p class="muted lead">Jobs that run on a schedule or when something happens. Create one from Chat, e.g. "every day at 9pm, tell me what I spent today".</p>
           <div id="tasks" class="list"></div>
         </section>
 
@@ -186,6 +182,7 @@
                 <button class="ghost" data-open="expenses"><svg><use href="#i-folder" /></svg><span>Expense sheet</span></button>
                 <button class="ghost" data-open="logs"><svg><use href="#i-folder" /></svg><span>Logs</span></button>
                 <button class="ghost" data-open="settings"><svg><use href="#i-folder" /></svg><span>Settings file</span></button>
+                <button class="ghost" id="quit-onyx"><span>Quit Onyx</span></button>
               </div>
               <p class="muted small" id="hotkeys"></p>
             </div>

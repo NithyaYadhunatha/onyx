@@ -1,10 +1,43 @@
+# Dependencies
 node_modules/
 .venv/
-__pycache__/
-*.pyc
-.pytest_cache/
+venv/
+
+# Downloaded at setup (large, and re-downloadable)
 models/
-tools/platform-tools/
+tools/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build output
 dist/
+out/
+*.tsbuildinfo
+
+# Logs and local state (Onyx keeps user data in ~/.onyx, never here)
 *.log
+logs/
+.onyx/
+
+# Secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Claude Code local files
+.claude/settings.local.json

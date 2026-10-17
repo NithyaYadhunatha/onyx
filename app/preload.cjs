@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('onyx', {
   pair: () => ipcRenderer.invoke('pair'),
   hide: () => ipcRenderer.send('hide'),
   quit: () => ipcRenderer.send('quit'),
+  quitAll: () => ipcRenderer.send('quit-all'),
   expand: (open) => ipcRenderer.send('expand', open),
   openApp: (page) => ipcRenderer.send('open-app', page),
   mustStay: (value) => ipcRenderer.send('must-stay', value),

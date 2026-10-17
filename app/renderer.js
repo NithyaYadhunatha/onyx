@@ -174,7 +174,7 @@
 
   function userBubble(text, source) {
     const u = el('div', 'msg user')
-    if (source) u.appendChild(el('span', 'src', esc(source === 'voice' ? '🎙 voice' : source)))
+    if (source) u.appendChild(el('span', 'src', esc(source === 'voice' ? 'Voice' : source === 'mobile' ? 'Phone' : source)))
     u.appendChild(el('div', 'bubble', esc(text)))
     append(u)
   }
@@ -276,7 +276,7 @@
     const danger = m.risk === 'danger'
     const c = el('div', `card${danger ? ' danger' : ''}`)
     c.innerHTML = `
-      <div class="head">${danger ? '⚠ Needs your OK: hard to undo' : 'Onyx wants to'}${m.background ? ' · scheduled task' : ''}</div>
+      <div class="head">${danger ? 'Approval needed · hard to undo' : 'Approval needed'}${m.background ? ' · scheduled task' : ''}</div>
       <div class="what">${esc(m.label)}</div>
       <div class="actions">
         <button class="primary${danger ? ' danger-btn' : ''}" data-a="allow">Allow</button>
@@ -518,7 +518,8 @@
   $('#tg-voice').addEventListener('change', (e) => setSetting({ 'voice.enabled': e.target.checked }))
   $('#tg-sms').addEventListener('change', (e) => setSetting({ 'phone.smsSync': e.target.checked }))
   $('#tg-lan').addEventListener('change', (e) => setSetting({ 'lan.enabled': e.target.checked }))
-  $$('[data-open]').forEach((b) => b.addEventListener('click', () => send({ type: 'open_path', which: b.dataset.open })))
+  $('#quit-onyx').addEventListener('click', () => window.onyx?.quitAll())
+  $('[data-open]').forEach((b) => b.addEventListener('click', () => send({ type: 'open_path', which: b.dataset.open })))
 
   // ---------------------------------------------------------------- events
 

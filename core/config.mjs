@@ -60,6 +60,8 @@ export const DEFAULTS = {
   // How long an approval waits for an answer before it counts as a no.
   approvalTimeoutSec: 180,
   hotkey: 'Alt+Space',
+  // Where you are: picks game servers, store regions and the like.
+  region: 'India',
   // Also load the MCP servers from your Claude Code config (~/.claude.json).
   includeClaudeCodeServers: false,
   phone: {

@@ -93,6 +93,16 @@ function createWidget() {
     webPreferences,
   })
   widget.setAlwaysOnTop(true, 'floating')
+  // Right-click the corner button for the essentials, including Quit.
+  widget.webContents.on('context-menu', () =>
+    Menu.buildFromTemplate([
+      { label: 'Open full app', click: () => openFull() },
+      { label: 'Settings', click: () => openFull('settings') },
+      { label: 'Stop what Onyx is doing', click: () => core.launch.stopRequest(core.config).catch(() => {}) },
+      { type: 'separator' },
+      { label: 'Quit Onyx', click: quitAll },
+    ]).popup({ window: widget }),
+  )
   widget.loadFile(path.join(__dirname, 'index.html'), { query: { mode: 'widget' } })
   widget.once('ready-to-show', () => widget.showInactive())
   widget.on('close', (e) => {
@@ -229,6 +239,7 @@ ipcMain.on('notify', (_e, { title, body }) => {
   n.show()
 })
 ipcMain.on('open-settings', () => openFull('settings'))
+ipcMain.on('quit-all', () => quitAll())
 
 app.setAppUserModelId('Onyx')
 app.on('second-instance', () => setExpanded(true))

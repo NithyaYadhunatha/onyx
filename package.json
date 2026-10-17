@@ -2,7 +2,16 @@
   "name": "onyx",
   "version": "0.1.0",
   "description": "Onyx: an open-source AI agent that controls your Windows PC and Android phone by text or voice.",
+  "author": "Nithya Yadhunatha",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NithyaYadhunatha/onyx.git"
+  },
+  "homepage": "https://github.com/NithyaYadhunatha/onyx#readme",
+  "bugs": {
+    "url": "https://github.com/NithyaYadhunatha/onyx/issues"
+  },
   "type": "module",
   "main": "app/main.cjs",
   "engines": {

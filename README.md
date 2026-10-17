@@ -113,7 +113,7 @@ Scheduled tasks use the same queue.
 ## Install
 
 ```bash
-git clone <this repository> onyx
+git clone https://github.com/NithyaYadhunatha/onyx.git
 cd onyx
 npm install
 npm run setup

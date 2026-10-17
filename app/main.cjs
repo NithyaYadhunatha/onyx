@@ -59,6 +59,18 @@ const webPreferences = {
   sandbox: true,
 }
 
+/** Page errors go to logs/app.log: the window has no console to show them. */
+function logPage(w, name) {
+  const file = core.dataPath(path.join('logs', 'app.log'))
+  const write = (line) => fs.appendFile(file, `${new Date().toISOString()} [${name}] ${line}\n`, () => {})
+  w.webContents.on('console-message', (e) => {
+    const level = e.level ?? e.params?.level
+    if (level === 'error' || level === 3 || level === 'warning' || level === 2) write(`${e.message ?? e.params?.message} (${e.sourceId ?? ''}:${e.lineNumber ?? ''})`)
+  })
+  w.webContents.on('render-process-gone', (_e, d) => write(`page crashed: ${d.reason}`))
+  w.webContents.on('did-fail-load', (_e, code, desc) => write(`failed to load: ${code} ${desc}`))
+}
+
 function guard(w) {
   // Links open in the real browser, never inside Onyx.
   w.webContents.setWindowOpenHandler(({ url }) => {
@@ -103,6 +115,7 @@ function createWidget() {
       { label: 'Quit Onyx', click: quitAll },
     ]).popup({ window: widget }),
   )
+  logPage(widget, 'widget')
   widget.loadFile(path.join(__dirname, 'index.html'), { query: { mode: 'widget' } })
   widget.once('ready-to-show', () => widget.showInactive())
   widget.on('close', (e) => {
@@ -146,6 +159,7 @@ function openFull(page) {
       titleBarOverlay: { color: '#0a0a0a', symbolColor: '#a3a3a3', height: 40 },
       webPreferences,
     })
+    logPage(full, 'app')
     full.loadFile(path.join(__dirname, 'index.html'), { query: { mode: 'app', page: page ?? 'chat' } })
     full.once('ready-to-show', () => full.show())
     full.on('close', (e) => {
@@ -161,6 +175,25 @@ function openFull(page) {
   if (full.isMinimized()) full.restore()
   full.show()
   full.focus()
+}
+
+// ---------------------------------------------------------------- core watchdog
+
+/** If the core dies, start it again: the window must never sit there disconnected. */
+function watchCore() {
+  let restarting = false
+  setInterval(async () => {
+    if (quitting || restarting) return
+    if (await core.launch.coreAlive(core.config)) return
+    restarting = true
+    try {
+      await core.launch.ensureCore(core.config, { quiet: true })
+    } catch (err) {
+      console.error('[onyx] could not restart the core:', err.message)
+    } finally {
+      restarting = false
+    }
+  }, 5000)
 }
 
 // ---------------------------------------------------------------- shell
@@ -255,6 +288,7 @@ app.whenReady().then(async () => {
   createWidget()
   core.hotkey = registerHotkey(core.config.hotkey)
   buildTray(core.hotkey)
+  watchCore()
 })
 app.on('will-quit', () => globalShortcut.unregisterAll())
 app.on('window-all-closed', (e) => e.preventDefault())

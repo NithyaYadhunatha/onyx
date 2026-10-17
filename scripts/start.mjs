@@ -25,6 +25,16 @@ async function stopRunning() {
     } catch {}
     for (let i = 0; i < 40 && (await coreAlive(config)); i++) await new Promise((r) => setTimeout(r, 250))
   }
+  // An admin-mode Onyx counts as a running task; while it does, Windows
+  // ignores every new start. Ending the task closes that instance.
+  if (elevatedTask()) spawnSync('schtasks', ['/end', '/tn', 'Onyx'], { stdio: 'ignore' })
+  // The window restarts a dead core within seconds; if it managed to before
+  // it was closed, shut that one down too.
+  await new Promise((r) => setTimeout(r, 500))
+  if (await coreAlive(config)) {
+    await fetch(`${coreUrl(config)}/shutdown`, { method: 'POST', headers: { authorization: `Bearer ${accessToken()}` } }).catch(() => {})
+    for (let i = 0; i < 40 && (await coreAlive(config)); i++) await new Promise((r) => setTimeout(r, 250))
+  }
   // Leftovers from an older Onyx that did not know how to shut its window down.
   try {
     execFileSync('powershell', [

@@ -519,7 +519,7 @@
   $('#tg-sms').addEventListener('change', (e) => setSetting({ 'phone.smsSync': e.target.checked }))
   $('#tg-lan').addEventListener('change', (e) => setSetting({ 'lan.enabled': e.target.checked }))
   $('#quit-onyx').addEventListener('click', () => window.onyx?.quitAll())
-  $('[data-open]').forEach((b) => b.addEventListener('click', () => send({ type: 'open_path', which: b.dataset.open })))
+  $$('[data-open]').forEach((b) => b.addEventListener('click', () => send({ type: 'open_path', which: b.dataset.open })))
 
   // ---------------------------------------------------------------- events
 
